@@ -3,88 +3,374 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8fafc">
   <title>공주대학교 천안캠퍼스 기숙사 식단표</title>
+
+  <script>
+    // 페이지가 표시되기 전에 저장된 테마를 적용해 깜빡임을 줄임
+    (function () {
+      try {
+        const savedTheme = localStorage.getItem("kongju_dorm_theme");
+        if (savedTheme === "dark") {
+          document.documentElement.classList.add("dark-theme");
+        }
+      } catch (error) {
+        // localStorage를 사용할 수 없는 환경에서는 밝은 테마 사용
+      }
+    })();
+  </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
+    /* ============================================
+       기본 테마 변수
+       ============================================ */
+
+    :root {
+      color-scheme: light;
+
+      --page-bg: #f8fafc;
+      --surface-bg: #ffffff;
+      --surface-secondary: #f1f5f9;
+      --surface-hover: #eff6ff;
+
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --text-meal: #475569;
+
+      --border-color: #e2e8f0;
+      --button-border: #cbd5e1;
+
+      --accent-color: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-text: #ffffff;
+
+      --shadow-color: rgba(15, 23, 42, 0.04);
+    }
+
+    :root.dark-theme {
+      color-scheme: dark;
+
+      --page-bg: #0f172a;
+      --surface-bg: #1e293b;
+      --surface-secondary: #334155;
+      --surface-hover: #334155;
+
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-meal: #cbd5e1;
+
+      --border-color: #334155;
+      --button-border: #475569;
+
+      --accent-color: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-text: #ffffff;
+
+      --shadow-color: rgba(0, 0, 0, 0.12);
+    }
+
+    /* ============================================
+       전체 페이지
+       ============================================ */
+
+    html {
+      min-height: 100%;
+      background: var(--page-bg);
+      transition: background-color 0.2s ease;
+    }
+
     body {
+      min-height: 100vh;
+      margin: 0;
       font-family: Arial, "Malgun Gothic", sans-serif;
-      background: #f8fafc;
-      color: #1e293b;
+      background: var(--page-bg);
+      color: var(--text-primary);
+      transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
     }
 
     button {
-      transition: background-color 0.15s, transform 0.15s;
+      font-family: inherit;
+      cursor: pointer;
+      transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
     }
 
     button:active {
       transform: scale(0.97);
     }
 
+    button:disabled {
+      cursor: not-allowed;
+    }
+
+    /* ============================================
+       헤더
+       ============================================ */
+
+    .university-label {
+      color: #2563eb;
+    }
+
+    .page-subtitle {
+      color: var(--text-secondary);
+    }
+
+    /* ============================================
+       공통 카드
+       ============================================ */
+
+    .panel {
+      background: var(--surface-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 2px 8px var(--shadow-color);
+      transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    /* Tailwind 배경색보다 테마 변수를 우선 적용 */
+    .bg-white {
+      background-color: var(--surface-bg) !important;
+    }
+
+    .border-slate-200 {
+      border-color: var(--border-color) !important;
+    }
+
+    .text-slate-500 {
+      color: var(--text-secondary) !important;
+    }
+
+    .text-slate-400 {
+      color: var(--text-secondary) !important;
+    }
+
+    .bg-slate-100 {
+      background-color: var(--surface-secondary) !important;
+    }
+
+    /* ============================================
+       주간·날짜 이동 버튼
+       ============================================ */
+
+    .week-button {
+      border: 1px solid var(--button-border);
+      border-radius: 10px;
+      padding: 9px 12px;
+      background: var(--surface-bg);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .week-button:hover:not(:disabled) {
+      background: var(--surface-hover);
+    }
+
+    .week-button:disabled {
+      opacity: 0.45;
+    }
+
+    .day-button {
+      border: 1px solid var(--button-border);
+      background: var(--surface-bg);
+      color: var(--text-primary);
+      border-radius: 10px;
+      padding: 10px 0;
+      font-weight: 600;
+    }
+
+    .day-button:hover {
+      background: var(--surface-hover);
+    }
+
+    .day-button.active {
+      background: var(--accent-color);
+      color: var(--accent-text);
+      border-color: var(--accent-color);
+    }
+
+    .day-button.active:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    /* 이번 주로 돌아가기 버튼 */
+    #currentWeekBtn {
+      color: var(--text-primary);
+    }
+
+    #currentWeekBtn:hover:not(:disabled) {
+      filter: brightness(0.96);
+    }
+
+    /* ============================================
+       테마 전환 버튼
+       ============================================ */
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-shrink: 0;
+
+      padding: 9px 13px;
+      border: 1px solid var(--button-border);
+      border-radius: 12px;
+
+      background: var(--surface-bg);
+      color: var(--text-primary);
+
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .theme-toggle:hover {
+      background: var(--surface-hover);
+    }
+
+    .theme-icon {
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    /* ============================================
+       식단 카드
+       ============================================ */
+
     .meal-card {
-      background: white;
-      border: 1px solid #e2e8f0;
+      background: var(--surface-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
       border-radius: 16px;
       padding: 18px;
       min-height: 150px;
+      box-shadow: 0 2px 8px var(--shadow-color);
+
+      transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
     }
 
     .meal-title {
+      color: var(--text-primary);
       font-size: 17px;
       font-weight: 700;
       margin-bottom: 12px;
     }
 
     .meal-content {
-      color: #475569;
+      color: var(--text-meal);
       font-size: 14px;
       line-height: 1.8;
       white-space: pre-line;
       overflow-wrap: anywhere;
     }
 
-    .day-button.active {
-      background: #2563eb;
-      color: white;
-      border-color: #2563eb;
+    /* ============================================
+       새로고침 버튼
+       ============================================ */
+
+    #refreshBtn {
+      background: var(--accent-color);
+      color: #ffffff;
     }
 
-    .day-button {
-      border: 1px solid #cbd5e1;
-      background: white;
-      border-radius: 10px;
-      padding: 10px 0;
-      font-weight: 600;
+    #refreshBtn:hover:not(:disabled) {
+      background: var(--accent-hover);
     }
 
-    .week-button {
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 9px 12px;
-      background: white;
-      font-size: 14px;
-      font-weight: 600;
+    #refreshBtn:disabled {
+      opacity: 0.65;
+      cursor: wait;
     }
 
-    .week-button:hover,
-    .day-button:hover {
-      background-color: #eff6ff;
-    }
-
-    .day-button.active:hover {
-      background: #1d4ed8;
-    }
+    /* ============================================
+       상태 메시지 및 하단 안내
+       ============================================ */
 
     .status-message {
       min-height: 24px;
       font-size: 13px;
-      color: #64748b;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      overflow-wrap: anywhere;
+    }
+
+    .footer-text {
+      color: var(--text-secondary);
     }
 
     .loading {
       opacity: 0.65;
       pointer-events: none;
+    }
+
+    /* ============================================
+       어두운 테마 추가 조정
+       ============================================ */
+
+    :root.dark-theme .university-label {
+      color: #60a5fa;
+    }
+
+    :root.dark-theme #currentWeekBtn {
+      background-color: #334155 !important;
+      color: #f1f5f9;
+    }
+
+    :root.dark-theme #currentWeekBtn:hover:not(:disabled) {
+      background-color: #475569 !important;
+    }
+
+    :root.dark-theme .opacity-50 {
+      opacity: 0.45;
+    }
+
+    /* ============================================
+       모바일 대응
+       ============================================ */
+
+    @media (max-width: 480px) {
+      .theme-toggle {
+        padding: 8px 10px;
+        gap: 5px;
+        font-size: 12px;
+      }
+
+      .week-button {
+        padding: 8px 9px;
+        font-size: 12px;
+      }
+
+      .meal-card {
+        padding: 16px;
+      }
+
+      .status-message {
+        font-size: 12px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
@@ -92,18 +378,35 @@
 <body>
   <main class="max-w-4xl mx-auto px-4 py-8">
 
+    <!-- 헤더 -->
     <header class="mb-7">
-      <p class="text-sm font-semibold text-blue-600 mb-2">
-        KONGJU NATIONAL UNIVERSITY
-      </p>
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="university-label text-sm font-semibold mb-2">
+            KONGJU NATIONAL UNIVERSITY
+          </p>
 
-      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">
-        기숙사 식단표
-      </h1>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">
+            기숙사 식단표
+          </h1>
 
-      <p class="text-sm text-slate-500 mt-2">
-        천안캠퍼스 · 평일 식단 안내
-      </p>
+          <p class="page-subtitle text-sm mt-2">
+            천안캠퍼스 · 평일 식단 안내
+          </p>
+        </div>
+
+        <!-- 테마 전환 -->
+        <button
+          id="themeToggle"
+          class="theme-toggle"
+          type="button"
+          aria-label="어두운 테마로 전환"
+          aria-pressed="false"
+        >
+          <span id="themeIcon" class="theme-icon" aria-hidden="true">🌙</span>
+          <span id="themeText">어두운 테마</span>
+        </button>
+      </div>
     </header>
 
     <!-- 주간 이동 -->
@@ -121,6 +424,7 @@
           <div id="weekLabel" class="font-bold text-sm sm:text-base">
             주간 식단
           </div>
+
           <div id="weekRange" class="text-xs text-slate-500 mt-1">
             날짜 확인 중
           </div>
@@ -159,6 +463,7 @@
           <div id="selectedDateLabel" class="font-bold text-lg">
             날짜 확인 중
           </div>
+
           <div id="selectedDayLabel" class="text-sm text-slate-500 mt-1">
           </div>
         </div>
@@ -189,7 +494,7 @@
 
       <button
         id="refreshBtn"
-        class="shrink-0 rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-semibold"
+        class="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold"
         type="button"
       >
         식단 새로고침
@@ -214,16 +519,105 @@
       </article>
     </section>
 
-    <footer class="mt-8 text-xs text-slate-400 leading-relaxed">
+    <!-- 하단 안내 -->
+    <footer class="footer-text mt-8 text-xs leading-relaxed">
       <p>식단 정보는 공주대학교 기숙사 홈페이지를 기준으로 표시합니다.</p>
-      <p class="mt-1">실제 제공 메뉴 및 운영 여부는 학교 공지사항을 확인해 주세요.</p>
+      <p class="mt-1">
+        실제 제공 메뉴 및 운영 여부는 학교 공지사항을 확인해 주세요.
+      </p>
     </footer>
 
   </main>
 
   <script>
     // ============================================
-    // 설정
+    // 테마 설정
+    // ============================================
+
+    const THEME_STORAGE_KEY = "kongju_dorm_theme";
+
+    function getSavedTheme() {
+      try {
+        return localStorage.getItem(THEME_STORAGE_KEY) === "dark"
+          ? "dark"
+          : "light";
+      } catch (error) {
+        return "light";
+      }
+    }
+
+    function applyTheme(theme, save = true) {
+      const isDark = theme === "dark";
+
+      document.documentElement.classList.toggle(
+        "dark-theme",
+        isDark
+      );
+
+      const themeToggle = document.getElementById("themeToggle");
+      const themeIcon = document.getElementById("themeIcon");
+      const themeText = document.getElementById("themeText");
+      const themeColorMeta = document.querySelector(
+        'meta[name="theme-color"]'
+      );
+
+      if (themeIcon) {
+        // 버튼에는 클릭하면 전환될 테마를 표시
+        themeIcon.textContent = isDark ? "☀️" : "🌙";
+      }
+
+      if (themeText) {
+        themeText.textContent = isDark
+          ? "밝은 테마"
+          : "어두운 테마";
+      }
+
+      if (themeToggle) {
+        themeToggle.setAttribute(
+          "aria-label",
+          isDark ? "밝은 테마로 전환" : "어두운 테마로 전환"
+        );
+
+        themeToggle.setAttribute(
+          "aria-pressed",
+          String(isDark)
+        );
+      }
+
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute(
+          "content",
+          isDark ? "#0f172a" : "#f8fafc"
+        );
+      }
+
+      if (save) {
+        try {
+          localStorage.setItem(
+            THEME_STORAGE_KEY,
+            isDark ? "dark" : "light"
+          );
+        } catch (error) {
+          console.warn("테마 설정을 저장하지 못했습니다.", error);
+        }
+      }
+    }
+
+    // 페이지 초기화 전에 저장된 테마 적용
+    applyTheme(getSavedTheme(), false);
+
+    document
+      .getElementById("themeToggle")
+      .addEventListener("click", () => {
+        const isCurrentlyDark =
+          document.documentElement.classList.contains("dark-theme");
+
+        applyTheme(isCurrentlyDark ? "light" : "dark");
+      });
+
+
+    // ============================================
+    // 식단 설정
     // ============================================
 
     const WORKER_URL =
@@ -238,14 +632,6 @@
       "목요일",
       "금요일"
     ];
-
-    const MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
-      "ko-KR",
-      {
-        month: "numeric",
-        day: "numeric"
-      }
-    );
 
     // 현재 보고 있는 주의 월요일
     let currentWeekMonday = getMonday(new Date());
@@ -366,13 +752,17 @@
       });
 
       const todayMonday = getMonday(new Date());
+      const isCurrentWeek = isSameDate(
+        currentWeekMonday,
+        todayMonday
+      );
 
       document.getElementById("currentWeekBtn").disabled =
-        isSameDate(currentWeekMonday, todayMonday);
+        isCurrentWeek;
 
       document.getElementById("currentWeekBtn").classList.toggle(
         "opacity-50",
-        isSameDate(currentWeekMonday, todayMonday)
+        isCurrentWeek
       );
     }
 
@@ -500,7 +890,9 @@
         const element = row.querySelector(selector);
 
         if (element) {
-          return cleanText(element.innerText || element.textContent);
+          return cleanText(
+            element.innerText || element.textContent
+          );
         }
       }
 
@@ -536,7 +928,7 @@
         );
       }
 
-      // 예: 10월 28일, 10.28, 2026-10-28
+      // 예: 2026-10-28, 2026.10.28
       let match = dateText.match(
         /(\d{4})\s*[.-]\s*(\d{1,2})\s*[.-]\s*(\d{1,2})/
       );
@@ -553,6 +945,7 @@
         }
       }
 
+      // 예: 10월 28일
       match = dateText.match(
         /(\d{1,2})\s*월\s*(\d{1,2})\s*일/
       );
@@ -561,10 +954,8 @@
         const month = Number(match[1]);
         const day = Number(match[2]);
 
-        // 학교 페이지에 연도가 없을 때 주간 날짜의 연도를 사용
         let year = currentWeekMonday.getFullYear();
 
-        // 주간 시작일과 종료일에 맞춰 연도 보정
         if (
           currentWeekMonday.getMonth() === 11 &&
           month === 1
@@ -587,6 +978,7 @@
         }
       }
 
+      // 예: 10.28, 10/28
       match = dateText.match(
         /(\d{1,2})\s*[./-]\s*(\d{1,2})(?!\d)/
       );
@@ -619,7 +1011,7 @@
         }
       }
 
-      // 날짜 셀을 찾지 못한 경우 첫 번째 셀에서 요일을 확인
+      // 날짜 셀을 찾지 못한 경우 첫 번째 셀에서 요일 확인
       const firstCell = cleanText(
         cells[0].innerText || cells[0].textContent
       );
@@ -646,7 +1038,6 @@
 
       const result = {};
 
-      // 표 구조가 조금씩 달라질 수 있으므로 여러 선택자를 확인
       const rows = Array.from(
         doc.querySelectorAll(
           "table.food tbody tr, #food-info tbody tr, table tbody tr"
@@ -663,7 +1054,6 @@
         const monday = currentWeekMonday;
         const friday = getWeekEnd();
 
-        // 현재 조회 중인 주의 평일만 반영
         if (date < monday || date > friday) {
           continue;
         }
@@ -677,7 +1067,7 @@
         };
       }
 
-      // 표 선택자가 일치하지 않을 때 날짜 정보가 포함된 행을 추가 탐색
+      // 표 선택자가 일치하지 않을 때 추가 탐색
       if (Object.keys(result).length === 0) {
         const allRows = Array.from(doc.querySelectorAll("tr"));
 
@@ -754,7 +1144,7 @@
         requestUrl.searchParams.set("weekStart", weekStart);
         requestUrl.searchParams.set("weekEnd", weekEnd);
 
-        // 강제 새로고침 시 브라우저 캐시도 우회
+        // 강제 새로고침 시 브라우저 캐시 우회
         if (forceRefresh) {
           requestUrl.searchParams.set(
             "_refresh",
@@ -779,7 +1169,7 @@
               errorMessage = errorData.error;
             }
           } catch (_) {
-            // 응답이 JSON이 아니면 기본 오류 메시지를 사용
+            // JSON이 아닌 응답이면 기본 오류 메시지 사용
           }
 
           throw new Error(errorMessage);
@@ -789,16 +1179,16 @@
           /"error"\s*:/.test(responseText.slice(0, 500)) &&
           responseText.trim().startsWith("{")
         ) {
+          let errorMessage = "워커 요청에 실패했습니다.";
+
           try {
             const errorData = JSON.parse(responseText);
-            throw new Error(
-              errorData.error || "워커 요청에 실패했습니다."
-            );
-          } catch (error) {
-            if (error instanceof Error && error.message) {
-              throw error;
-            }
+            errorMessage = errorData.error || errorMessage;
+          } catch (_) {
+            // 기본 오류 메시지 사용
           }
+
+          throw new Error(errorMessage);
         }
 
         const parsedMeals = parseMealsFromHtml(responseText);
@@ -820,7 +1210,7 @@
       } catch (error) {
         console.error("식단 가져오기 실패:", error);
 
-        // 요청 실패 시 캐시가 있다면 기존 식단 유지
+        // 요청 실패 시 저장된 캐시 확인
         const cachedSuccessfully = loadMealsFromCache();
 
         if (cachedSuccessfully) {
@@ -830,9 +1220,20 @@
         } else {
           mealsByDate = {};
 
-          showMealText("breakfast", "식단을 불러오지 못했습니다.");
-          showMealText("lunch", "식단을 불러오지 못했습니다.");
-          showMealText("dinner", "식단을 불러오지 못했습니다.");
+          showMealText(
+            "breakfast",
+            "식단을 불러오지 못했습니다."
+          );
+
+          showMealText(
+            "lunch",
+            "식단을 불러오지 못했습니다."
+          );
+
+          showMealText(
+            "dinner",
+            "식단을 불러오지 못했습니다."
+          );
 
           setStatus(`오류: ${error.message}`);
         }
@@ -857,12 +1258,11 @@
       );
 
       selectedDayIndex = 0;
-
       mealsByDate = {};
 
       updateDateControls();
 
-      // 이동한 주에 해당하는 캐시를 사용하거나 새로 요청
+      // 해당 주의 캐시를 사용하거나 새로 요청
       fetchMeals(false);
     }
 
@@ -879,17 +1279,18 @@
 
 
     // ============================================
-    // 요일 이동
+    // 날짜 이동
     // ============================================
 
     function moveDay(amount) {
       const nextDate = addDays(getSelectedDate(), amount);
 
-      // 토요일·일요일은 표시하지 않고 인접 주의 평일로 이동
+      // 토요일에서 다음 평일로 이동
       if (nextDate.getDay() === 6) {
         currentWeekMonday = addDays(currentWeekMonday, 7);
         selectedDayIndex = 0;
       } else if (nextDate.getDay() === 0) {
+        // 일요일에서 이전 평일로 이동
         currentWeekMonday = addDays(currentWeekMonday, -7);
         selectedDayIndex = 4;
       } else {
@@ -946,7 +1347,7 @@
 
           renderSelectedDay();
 
-          // 해당 날짜의 데이터가 없으면 그 주 식단을 요청
+          // 해당 날짜의 데이터가 없으면 식단 재요청
           const key = formatFullDate(getSelectedDate());
 
           if (!mealsByDate[key]) {
@@ -968,7 +1369,7 @@
 
     updateDateControls();
 
-    // 먼저 캐시를 표시하고, 캐시가 없으면 서버에서 가져오기
+    // 캐시가 있으면 우선 표시하고, 없으면 서버에서 가져오기
     if (!loadMealsFromCache()) {
       fetchMeals(true);
     }
