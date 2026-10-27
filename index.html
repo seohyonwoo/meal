@@ -20,7 +20,7 @@
         <h1 class="text-xl font-bold flex items-center gap-2">
           <i class="fa-solid fa-utensils"></i> 공주대 기숙사 식단표
         </h1>
-        <p class="text-xs text-indigo-200">Cloudflare Worker 기반 실시간 연동</p>
+        <p class="text-xs text-indigo-200">Cloudflare Worker 연동 완료</p>
       </div>
       <button id="themeToggle" class="p-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 dark:bg-indigo-800 text-white transition">
         <i class="fa-solid fa-moon dark:hidden"></i>
@@ -184,17 +184,27 @@
     function displaySelectedDayMenu() {
       updateMealTags();
 
-      const formatText = (text) => {
-        if (!text || text.trim() === '' || text.includes('등록된 식단이 없습니다')) {
+      const formatText = (rawText) => {
+        if (!rawText || rawText.trim() === '') {
           return '<p class="text-slate-400 italic">등록된 식단이 없습니다.</p>';
         }
 
-        // 콤마, 공백, 줄바꿈 단위로 정제
-        return text.split(/[\n,]/)
-                   .map(item => item.trim())
-                   .filter(item => item !== '')
-                   .map(item => `<div class="py-0.5">• ${item}</div>`)
-                   .join('');
+        // HTML 원본 특유의 줄바꿈(\n) 및 태그 정제
+        const lines = rawText.split('\n')
+                             .map(item => item.trim())
+                             .filter(item => item.length > 0);
+
+        if (lines.length === 0) {
+          return '<p class="text-slate-400 italic">등록된 식단이 없습니다.</p>';
+        }
+
+        return lines.map(item => {
+          // 칼로리 정보(예: 980kcal/34g)는 약간 작은 글씨로 표시
+          if (item.includes('kcal')) {
+            return `<div class="mt-2 text-xs text-indigo-500 font-semibold dark:text-indigo-400"><i class="fa-solid fa-fire"></i> ${item}</div>`;
+          }
+          return `<div class="py-0.5">• ${item}</div>`;
+        }).join('');
       };
 
       document.getElementById('menuBreakfast').innerHTML = formatText(parsedWeeklyData.breakfast[selectedDayIdx]);
@@ -202,7 +212,7 @@
       document.getElementById('menuDinner').innerHTML = formatText(parsedWeeklyData.dinner[selectedDayIdx]);
     }
 
-    // 개발자 도구의 data-mqtitle 속성을 직접 타겟팅하는 파서
+    // 올려주신 HTML 원본 구조(data-mqtitle) 맞춤 파서
     async function fetchDormiMeal() {
       const statusText = document.getElementById('statusText');
       const statusDot = document.getElementById('statusDot');
@@ -212,13 +222,13 @@
 
       try {
         const res = await fetch(WORKER_URL);
-        if (!res.ok) throw new Error('Worker 응답 오류');
+        if (!res.ok) throw new Error('Worker 응답 실패');
 
         const htmlText = await res.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, 'text/html');
 
-        // tbody 내의 행(tr) 탐색
+        // 원본 HTML의 tbody 내 tr 읽기
         const rows = doc.querySelectorAll('tbody tr');
 
         if (rows.length > 0) {
@@ -237,14 +247,13 @@
             const dinnerTd = row.querySelector('td[data-mqtitle="dinner"]');
 
             if (dayTd) {
-              const dayText = dayTd.innerText ? dayTd.innerText.trim() : '';
+              const cleanDay = dayTd.textContent.replace(/\s+/g, ''); // 공백/줄바꿈 완벽 제거
 
-              // 요일 글자만 추출 (예: "월", "화" 등)
               for (const [key, idx] of Object.entries(dayMap)) {
-                if (dayText.includes(key)) {
-                  parsedWeeklyData.breakfast[idx] = breakfastTd ? breakfastTd.innerText.trim() : '';
-                  parsedWeeklyData.lunch[idx] = lunchTd ? lunchTd.innerText.trim() : '';
-                  parsedWeeklyData.dinner[idx] = dinnerTd ? dinnerTd.innerText.trim() : '';
+                if (cleanDay.includes(key)) {
+                  parsedWeeklyData.breakfast[idx] = breakfastTd ? breakfastTd.textContent : '';
+                  parsedWeeklyData.lunch[idx] = lunchTd ? lunchTd.textContent : '';
+                  parsedWeeklyData.dinner[idx] = dinnerTd ? dinnerTd.textContent : '';
                   break;
                 }
               }
@@ -256,16 +265,16 @@
           displaySelectedDayMenu();
           return;
         } else {
-          throw new Error('tbody tr 요소를 찾지 못했습니다.');
+          throw new Error('tbody tr 요소를 찾지 못함');
         }
       } catch (err) {
-        console.error('크롤링 에러:', err);
+        console.error('크롤링 오류:', err);
         statusText.innerText = '데이터 수신 실패 (새로고침 시도)';
         statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-rose-500';
       }
     }
 
-    // 이벤트 리스너
+    // 네비게이션 버튼 이벤트
     document.getElementById('prevBtn').onclick = () => {
       selectedDayIdx = (selectedDayIdx - 1 + 7) % 7;
       renderTabs();
@@ -287,7 +296,7 @@
     document.getElementById('retryBtn').onclick = fetchDormiMeal;
     document.getElementById('themeToggle').onclick = () => document.documentElement.classList.toggle('dark');
 
-    // 실행
+    // 초기 실행
     renderTabs();
     fetchDormiMeal();
   </script>
