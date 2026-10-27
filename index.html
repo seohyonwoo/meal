@@ -109,10 +109,7 @@
   </main>
 
   <script>
-    // 지정해주신 Cloudflare Worker URL
     const WORKER_URL = 'https://meal.curly-base-322e.workers.dev/';
-    
-    // 월~일 순서 (0:월, 1:화, 2:수, 3:목, 4:금, 5:토, 6:일)
     const daysName = ['월', '화', '수', '목', '금', '토', '일'];
 
     function getTodayIndex() {
@@ -192,7 +189,7 @@
           return '<p class="text-slate-400 italic">등록된 식단이 없습니다.</p>';
         }
 
-        // 공백 및 / 구분자 정제하여 반환
+        // 콤마, 공백, 줄바꿈 단위로 정제
         return text.split(/[\n,]/)
                    .map(item => item.trim())
                    .filter(item => item !== '')
@@ -205,7 +202,7 @@
       document.getElementById('menuDinner').innerHTML = formatText(parsedWeeklyData.dinner[selectedDayIdx]);
     }
 
-    // 사진속 표 구조(행=날짜, 열=요일/날짜/아침/점심/저녁) 맞춤형 파서
+    // 개발자 도구의 data-mqtitle 속성을 직접 타겟팅하는 파서
     async function fetchDormiMeal() {
       const statusText = document.getElementById('statusText');
       const statusDot = document.getElementById('statusDot');
@@ -215,12 +212,14 @@
 
       try {
         const res = await fetch(WORKER_URL);
-        if (!res.ok) throw new Error('Worker 응답에 실패했습니다.');
+        if (!res.ok) throw new Error('Worker 응답 오류');
 
         const htmlText = await res.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, 'text/html');
-        const rows = doc.querySelectorAll('table tr');
+
+        // tbody 내의 행(tr) 탐색
+        const rows = doc.querySelectorAll('tbody tr');
 
         if (rows.length > 0) {
           parsedWeeklyData = {
@@ -229,19 +228,25 @@
             dinner: Array(7).fill('')
           };
 
-          rows.forEach(row => {
-            const cols = row.querySelectorAll('td, th');
-            if (cols.length >= 5) {
-              const dayText = cols[0].innerText ? cols[0].innerText.trim() : '';
-              
-              // 요일 색인 찾기 (일, 월, 화, 수, 목, 금, 토)
-              const dayMap = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+          const dayMap = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
-              if (dayMap.hasOwnProperty(dayText)) {
-                const targetIdx = dayMap[dayText];
-                parsedWeeklyData.breakfast[targetIdx] = cols[2].innerText ? cols[2].innerText.trim() : '';
-                parsedWeeklyData.lunch[targetIdx] = cols[3].innerText ? cols[3].innerText.trim() : '';
-                parsedWeeklyData.dinner[targetIdx] = cols[4].innerText ? cols[4].innerText.trim() : '';
+          rows.forEach(row => {
+            const dayTd = row.querySelector('td[data-mqtitle="day"]');
+            const breakfastTd = row.querySelector('td[data-mqtitle="breakfast"]');
+            const lunchTd = row.querySelector('td[data-mqtitle="lunch"]');
+            const dinnerTd = row.querySelector('td[data-mqtitle="dinner"]');
+
+            if (dayTd) {
+              const dayText = dayTd.innerText ? dayTd.innerText.trim() : '';
+
+              // 요일 글자만 추출 (예: "월", "화" 등)
+              for (const [key, idx] of Object.entries(dayMap)) {
+                if (dayText.includes(key)) {
+                  parsedWeeklyData.breakfast[idx] = breakfastTd ? breakfastTd.innerText.trim() : '';
+                  parsedWeeklyData.lunch[idx] = lunchTd ? lunchTd.innerText.trim() : '';
+                  parsedWeeklyData.dinner[idx] = dinnerTd ? dinnerTd.innerText.trim() : '';
+                  break;
+                }
               }
             }
           });
@@ -251,7 +256,7 @@
           displaySelectedDayMenu();
           return;
         } else {
-          throw new Error('테이블 요소를 발견하지 못했습니다.');
+          throw new Error('tbody tr 요소를 찾지 못했습니다.');
         }
       } catch (err) {
         console.error('크롤링 에러:', err);
@@ -260,7 +265,7 @@
       }
     }
 
-    // 버튼 이벤트
+    // 이벤트 리스너
     document.getElementById('prevBtn').onclick = () => {
       selectedDayIdx = (selectedDayIdx - 1 + 7) % 7;
       renderTabs();
