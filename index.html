@@ -255,12 +255,70 @@
     return { data: next, dates: nextDates };
   }
 
-  async function fetchMeals() {
+  // 이번 주 식단을 브라우저 localStorage에 저장합니다.
+  // 주가 바뀌면 캐시 키도 바뀌므로 지난주 식단이 자동으로 재사용되지 않습니다.
+  function getWeekCacheKey() {
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    monday.setDate(monday.getDate() - mondayIndex(monday));
+    const yyyy = monday.getFullYear();
+    const mm = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    return `kongju-dorm-meals:${SOURCE_CODE}:${yyyy}-${mm}-${dd}`;
+  }
+
+  function saveMealsToCache(data, dateList) {
+    try {
+      localStorage.setItem(getWeekCacheKey(), JSON.stringify({
+        savedAt: Date.now(),
+        data,
+        dates: dateList
+      }));
+    } catch (error) {
+      console.warn('[식단표] 브라우저 캐시에 저장하지 못했습니다.', error);
+    }
+  }
+
+  function loadMealsFromCache() {
+    try {
+      const raw = localStorage.getItem(getWeekCacheKey());
+      if (!raw) return false;
+      const cached = JSON.parse(raw);
+      if (!cached || !cached.data || !Array.isArray(cached.dates)) return false;
+      if (!mealKeys.every(key => Array.isArray(cached.data[key]) && cached.data[key].length === 7)) return false;
+      if (!mealKeys.some(key => cached.data[key].some(value => String(value || '').trim()))) return false;
+
+      weekly = cached.data;
+      dates = cached.dates;
+      selectedDayIdx = dateIndexForToday(dates) ?? todayIdx;
+      renderTabs();
+      displayMenus();
+      const savedTime = cached.savedAt
+        ? new Date(cached.savedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : '';
+      setStatus(`저장된 이번 주 식단 표시 중${savedTime ? ` · ${savedTime} 저장` : ''}`, 'success');
+      return true;
+    } catch (error) {
+      console.warn('[식단표] 캐시를 읽지 못했습니다.', error);
+      return false;
+    }
+  }
+
+  async function fetchMeals(forceRefresh = false) {
     const retry = document.getElementById('retryBtn');
+
+    // 최초 진입 시 캐시가 있으면 네트워크 요청 없이 즉시 표시합니다.
+    // 새로고침 버튼에서만 forceRefresh=true로 호출되어 원본을 다시 요청합니다.
+    if (!forceRefresh && loadMealsFromCache()) {
+      clearError();
+      return;
+    }
+
     retry.disabled = true;
     retry.textContent = '불러오는 중...';
     clearError();
-    setStatus('실시간 식단 데이터 불러오는 중...', 'loading');
+    setStatus(forceRefresh ? '최신 식단을 다시 불러오는 중...' : '식단 데이터를 처음 불러오는 중...', 'loading');
+
     try {
       const response = await fetch(WORKER_URL, {
         method: 'GET',
@@ -273,55 +331,51 @@
       if (!body.trim()) throw new Error('Worker 응답이 비어 있습니다.');
 
       let htmlText = body;
+      let parsed;
       // Worker가 {html:"..."} 또는 {data:"..."} 형태 JSON을 반환하는 경우도 지원합니다.
       if (contentType.includes('application/json') || /^[\s]*\{/.test(body)) {
+        let json;
         try {
-          const json = JSON.parse(body);
-          htmlText = json.html || json.data || json.body || '';
-          if (!htmlText && Array.isArray(json.rows)) {
-            const mapped = emptyWeek();
-            const mappedDates = Array(7).fill('');
-            json.rows.forEach(item => {
-              const day = String(item.day || item.weekday || '').replace(/\s/g, '').match(/[월화수목금토일]/)?.[0];
-              if (!day) return;
-              const i = DAY_TO_INDEX[day];
-              mappedDates[i] = item.date || '';
-              mapped.breakfast[i] = item.breakfast || '';
-              mapped.lunch[i] = item.lunch || '';
-              mapped.dinner[i] = item.dinner || '';
-            });
-            if (mealKeys.some(k => mapped[k].some(Boolean))) {
-              weekly = mapped; dates = mappedDates;
-              selectedDayIdx = dateIndexForToday(mappedDates) ?? todayIdx;
-              renderTabs(); displayMenus(); setStatus('식단 데이터 연동 성공', 'success');
-              return;
-            }
+          json = JSON.parse(body);
+        } catch (_) {
+          throw new Error('Worker가 JSON이라고 표시했지만 JSON 형식이 올바르지 않습니다.');
+        }
+        htmlText = json.html || json.data || json.body || '';
+        if (!htmlText && Array.isArray(json.rows)) {
+          const mapped = emptyWeek();
+          const mappedDates = Array(7).fill('');
+          json.rows.forEach(item => {
+            const day = String(item.day || item.weekday || '').replace(/\s/g, '').match(/[월화수목금토일]/)?.[0];
+            if (!day) return;
+            const i = DAY_TO_INDEX[day];
+            mappedDates[i] = item.date || '';
+            mapped.breakfast[i] = item.breakfast || '';
+            mapped.lunch[i] = item.lunch || '';
+            mapped.dinner[i] = item.dinner || '';
+          });
+          if (!mealKeys.some(k => mapped[k].some(Boolean))) {
+            throw new Error('Worker JSON 응답에 식단 데이터가 없습니다.');
           }
-          if (!htmlText) throw new Error('JSON 응답에서 html/data/body 또는 rows 필드를 찾지 못했습니다.');
-        } catch (e) {
-          if (e instanceof SyntaxError) throw new Error('Worker가 JSON이라고 표시했지만 JSON 형식이 올바르지 않습니다.');
-          throw e;
+          parsed = { data: mapped, dates: mappedDates };
+        }
+        if (!htmlText && !parsed) {
+          throw new Error(json.error || 'JSON 응답에서 html/data/body 또는 rows 필드를 찾지 못했습니다.');
         }
       }
 
-      const parsed = parseSource(htmlText);
+      if (!parsed) parsed = parseSource(htmlText);
       weekly = parsed.data;
       dates = parsed.dates;
       selectedDayIdx = dateIndexForToday(dates) ?? todayIdx;
       renderTabs();
       displayMenus();
-      setStatus('식단 데이터 연동 성공', 'success');
+      saveMealsToCache(weekly, dates);
+      setStatus('식단 연동 성공 · 이번 주 식단 저장 완료', 'success');
     } catch (error) {
       console.error('[식단표]', error);
-      setStatus('식단 데이터를 불러오지 못했습니다.', 'error');
-      showError(`${error.message} 원본 식단표는 아래 링크에서 확인할 수 있습니다. Worker 주소가 실제 식단 HTML을 반환하지 않는 경우에는 Worker 코드도 수정해야 합니다.`);
-      // 실패 시 빈 메뉴를 성공처럼 표시하지 않도록 명확히 안내합니다.
-      for (const key of mealKeys) {
-        const p = document.createElement('p');
-        p.className = 'text-rose-500';
-        p.textContent = '데이터를 불러오지 못했습니다.';
-        document.getElementById(mealElements[key]).replaceChildren(p);
-      }
+      setStatus('식단을 새로 불러오지 못했습니다.', 'error');
+      showError(`${error.message} 기존에 저장된 식단이 있다면 화면에는 유지됩니다. 잠시 후 새로고침을 다시 시도하거나 원본 식단표를 확인해 주세요.`);
+      // 기존에 화면에 표시된 식단은 지우지 않습니다.
     } finally {
       retry.disabled = false;
       retry.textContent = '새로고침';
@@ -344,7 +398,7 @@
   document.getElementById('todayBtn').addEventListener('click', () => {
     selectedDayIdx = dateIndexForToday(dates) ?? todayIdx; renderTabs(); displayMenus();
   });
-  document.getElementById('retryBtn').addEventListener('click', fetchMeals);
+  document.getElementById('retryBtn').addEventListener('click', () => fetchMeals(true));
   document.getElementById('themeToggle').addEventListener('click', () => {
     document.documentElement.classList.toggle('dark');
     try { localStorage.setItem('meal-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); } catch (_) {}
@@ -352,7 +406,7 @@
   try { if (localStorage.getItem('meal-theme') === 'dark') document.documentElement.classList.add('dark'); } catch (_) {}
 
   renderTabs();
-  fetchMeals();
+  fetchMeals(false);
 })();
 </script>
 </body>
