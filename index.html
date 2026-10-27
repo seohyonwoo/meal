@@ -20,7 +20,7 @@
         <h1 class="text-xl font-bold flex items-center gap-2">
           <i class="fa-solid fa-utensils"></i> 공주대 기숙사 식단표
         </h1>
-        <p class="text-xs text-indigo-200">dormi.kongju.ac.kr 실시간 연동</p>
+        <p class="text-xs text-indigo-200">Cloudflare Worker 기반 실시간 연동</p>
       </div>
       <button id="themeToggle" class="p-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 dark:bg-indigo-800 text-white transition">
         <i class="fa-solid fa-moon dark:hidden"></i>
@@ -31,16 +31,7 @@
 
   <main class="max-w-md mx-auto px-4 pt-4">
 
-    <!-- 관 선택 (공주/천안/예산 캠퍼스 대응) -->
-    <div class="mb-3">
-      <select id="codeSelect" class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-lg p-2 font-semibold text-slate-700 dark:text-slate-200 shadow-sm outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="041304" selected>챌린지하우스 / 공주캠퍼스 (041304)</option>
-        <option value="041302">공주캠퍼스 식단표 1 (041302)</option>
-        <option value="041303">공주캠퍼스 식단표 2 (041303)</option>
-      </select>
-    </div>
-
-    <!-- 날짜 이동 네비게이션 -->
+    <!-- 어제 / 오늘 / 내일 네비게이션 -->
     <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 mb-4">
       <div class="flex items-center justify-between gap-2 mb-3">
         <button id="prevBtn" class="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1">
@@ -54,15 +45,15 @@
         </button>
       </div>
 
-      <!-- 요일 직접 선택 탭 -->
+      <!-- 요일 선택 탭 -->
       <div id="dayTabs" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
     </section>
 
-    <!-- 연결 상태 안내 -->
+    <!-- 동기화 상태 표시 -->
     <div class="flex items-center justify-between text-xs text-slate-500 mb-4 px-1">
       <div class="flex items-center gap-1.5">
         <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping" id="statusDot"></span>
-        <span id="statusText">학교 서버 동기화 중...</span>
+        <span id="statusText">식단표 데이터 동기화 중...</span>
       </div>
       <button id="retryBtn" class="text-xs text-indigo-600 dark:text-indigo-400 underline font-medium">새로고침</button>
     </div>
@@ -78,7 +69,7 @@
           <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagBreakfast">대기</span>
         </div>
         <div id="menuBreakfast" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
-          <p class="animate-pulse text-slate-400">불러오는 중...</p>
+          <p class="animate-pulse text-slate-400">식단을 읽어오는 중...</p>
         </div>
       </div>
 
@@ -91,7 +82,7 @@
           <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagLunch">대기</span>
         </div>
         <div id="menuLunch" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
-          <p class="animate-pulse text-slate-400">불러오는 중...</p>
+          <p class="animate-pulse text-slate-400">식단을 읽어오는 중...</p>
         </div>
       </div>
 
@@ -104,20 +95,24 @@
           <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagDinner">대기</span>
         </div>
         <div id="menuDinner" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
-          <p class="animate-pulse text-slate-400">불러오는 중...</p>
+          <p class="animate-pulse text-slate-400">식단을 읽어오는 중...</p>
         </div>
       </div>
     </section>
 
     <!-- 원본 페이지 링크 -->
     <div class="mt-6 text-center">
-      <a id="originalLink" href="https://dormi.kongju.ac.kr/HOME/sub.php?code=041304" target="_blank" rel="noopener noreferrer" class="text-xs text-slate-400 hover:text-indigo-500 underline">
+      <a href="https://dormi.kongju.ac.kr/HOME/sub.php?code=041304" target="_blank" rel="noopener noreferrer" class="text-xs text-slate-400 hover:text-indigo-500 underline">
         공주대학교 생활관 원본 식단표 열기 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
       </a>
     </div>
   </main>
 
   <script>
+    // 지정해주신 Cloudflare Worker URL
+    const WORKER_URL = 'https://meal.curly-base-322e.workers.dev/';
+    
+    // 월~일 순서 (0:월, 1:화, 2:수, 3:목, 4:금, 5:토, 6:일)
     const daysName = ['월', '화', '수', '목', '금', '토', '일'];
 
     function getTodayIndex() {
@@ -196,10 +191,11 @@
         if (!text || text.trim() === '' || text.includes('등록된 식단이 없습니다')) {
           return '<p class="text-slate-400 italic">등록된 식단이 없습니다.</p>';
         }
-        return text.replace(/<br\s*\/?>/gi, '\n')
-                   .split('\n')
-                   .map(item => item.replace(/<[^>]*>?/gm, '').trim())
-                   .filter(item => item !== '' && !item.includes('등록된 식단이'))
+
+        // 공백 및 / 구분자 정제하여 반환
+        return text.split(/[\n,]/)
+                   .map(item => item.trim())
+                   .filter(item => item !== '')
                    .map(item => `<div class="py-0.5">• ${item}</div>`)
                    .join('');
       };
@@ -209,49 +205,21 @@
       document.getElementById('menuDinner').innerHTML = formatText(parsedWeeklyData.dinner[selectedDayIdx]);
     }
 
-    // 강력한 크롤러 엔진
+    // 사진속 표 구조(행=날짜, 열=요일/날짜/아침/점심/저녁) 맞춤형 파서
     async function fetchDormiMeal() {
-      const code = document.getElementById('codeSelect').value;
-      const targetUrl = `https://dormi.kongju.ac.kr/HOME/sub.php?code=${code}`;
-      document.getElementById('originalLink').href = targetUrl;
-
       const statusText = document.getElementById('statusText');
       const statusDot = document.getElementById('statusDot');
 
-      statusText.innerText = '학교 서버에서 실시간 조회 중...';
+      statusText.innerText = '실시간 식단 데이터 불러오는 중...';
       statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
 
-      // 프록시 목록 (AllOrigins JSON 모드가 EUC-KR 한글 보정에 우수함)
-      const proxyList = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
-      ];
+      try {
+        const res = await fetch(WORKER_URL);
+        if (!res.ok) throw new Error('Worker 응답에 실패했습니다.');
 
-      let rawHtml = null;
-
-      for (const proxyUrl of proxyList) {
-        try {
-          const res = await fetch(proxyUrl);
-          if (!res.ok) continue;
-
-          if (proxyUrl.includes('allorigins')) {
-            const json = await res.json();
-            rawHtml = json.contents;
-          } else {
-            rawHtml = await res.text();
-          }
-
-          if (rawHtml && rawHtml.includes('table')) {
-            break;
-          }
-        } catch (e) {
-          console.warn('프록시 시도 무산, 전환 중...', e);
-        }
-      }
-
-      if (rawHtml) {
+        const htmlText = await res.text();
         const parser = new DOMParser();
-        const doc = parser.parseFromString(rawHtml, 'text/html');
+        const doc = parser.parseFromString(htmlText, 'text/html');
         const rows = doc.querySelectorAll('table tr');
 
         if (rows.length > 0) {
@@ -262,32 +230,37 @@
           };
 
           rows.forEach(row => {
-            const cells = Array.from(row.querySelectorAll('td, th')).map(td => td.innerHTML);
-            const rowText = row.innerText || row.textContent || '';
+            const cols = row.querySelectorAll('td, th');
+            if (cols.length >= 5) {
+              const dayText = cols[0].innerText ? cols[0].innerText.trim() : '';
+              
+              // 요일 색인 찾기 (일, 월, 화, 수, 목, 금, 토)
+              const dayMap = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
-            if (rowText.includes('아침') || rowText.includes('조식')) {
-              cells.slice(1, 8).forEach((html, i) => { if(i < 7 && html) parsedWeeklyData.breakfast[i] = html; });
-            } else if (rowText.includes('점심') || rowText.includes('중식')) {
-              cells.slice(1, 8).forEach((html, i) => { if(i < 7 && html) parsedWeeklyData.lunch[i] = html; });
-            } else if (rowText.includes('저녁') || rowText.includes('석식')) {
-              cells.slice(1, 8).forEach((html, i) => { if(i < 7 && html) parsedWeeklyData.dinner[i] = html; });
+              if (dayMap.hasOwnProperty(dayText)) {
+                const targetIdx = dayMap[dayText];
+                parsedWeeklyData.breakfast[targetIdx] = cols[2].innerText ? cols[2].innerText.trim() : '';
+                parsedWeeklyData.lunch[targetIdx] = cols[3].innerText ? cols[3].innerText.trim() : '';
+                parsedWeeklyData.dinner[targetIdx] = cols[4].innerText ? cols[4].innerText.trim() : '';
+              }
             }
           });
 
-          statusText.innerText = '실시간 식단 연동 완료';
+          statusText.innerText = '실시간 연동 성공!';
           statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-emerald-500';
           displaySelectedDayMenu();
           return;
+        } else {
+          throw new Error('테이블 요소를 발견하지 못했습니다.');
         }
+      } catch (err) {
+        console.error('크롤링 에러:', err);
+        statusText.innerText = '데이터 수신 실패 (새로고침 시도)';
+        statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-rose-500';
       }
-
-      // 수신 실패 시 처리
-      statusText.innerText = '학교 서버 수신 실패 (드롭다운 관 변경 시도)';
-      statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-rose-500';
-      displaySelectedDayMenu();
     }
 
-    // 네비게이션 및 컨트롤러 이벤트
+    // 버튼 이벤트
     document.getElementById('prevBtn').onclick = () => {
       selectedDayIdx = (selectedDayIdx - 1 + 7) % 7;
       renderTabs();
@@ -306,7 +279,6 @@
       displaySelectedDayMenu();
     };
 
-    document.getElementById('codeSelect').onchange = fetchDormiMeal;
     document.getElementById('retryBtn').onclick = fetchDormiMeal;
     document.getElementById('themeToggle').onclick = () => document.documentElement.classList.toggle('dark');
 
