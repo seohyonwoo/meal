@@ -2,804 +2,976 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#4f46e5">
-  <title>공주대학교 기숙사 식단표</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공주대학교 천안캠퍼스 기숙사 식단표</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: Pretendard, sans-serif; }
-    .meal-line { overflow-wrap: anywhere; }
+    body {
+      font-family: Arial, "Malgun Gothic", sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    button {
+      transition: background-color 0.15s, transform 0.15s;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .meal-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px;
+      min-height: 150px;
+    }
+
+    .meal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .meal-content {
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.8;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
+    .day-button.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    .day-button {
+      border: 1px solid #cbd5e1;
+      background: white;
+      border-radius: 10px;
+      padding: 10px 0;
+      font-weight: 600;
+    }
+
+    .week-button {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 9px 12px;
+      background: white;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .week-button:hover,
+    .day-button:hover {
+      background-color: #eff6ff;
+    }
+
+    .day-button.active:hover {
+      background: #1d4ed8;
+    }
+
+    .status-message {
+      min-height: 24px;
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .loading {
+      opacity: 0.65;
+      pointer-events: none;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-slate-50 pb-12 text-slate-800 transition-colors duration-200 dark:bg-slate-900 dark:text-slate-100">
 
-<header class="bg-indigo-600 text-white shadow-lg dark:bg-indigo-900">
-  <div class="mx-auto flex max-w-md items-center justify-between px-4 py-4">
-    <div>
-      <h1 class="flex items-center gap-2 text-xl font-bold">
-        <i class="fa-solid fa-utensils"></i>기숙사 식단표
+<body>
+  <main class="max-w-4xl mx-auto px-4 py-8">
+
+    <header class="mb-7">
+      <p class="text-sm font-semibold text-blue-600 mb-2">
+        KONGJU NATIONAL UNIVERSITY
+      </p>
+
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">
+        기숙사 식단표
       </h1>
-      <p class="mt-1 text-xs text-indigo-200">국립공주대학교 천안공과대학 학생생활관</p>
-    </div>
-  </div>
-</header>
 
-<main class="mx-auto max-w-md px-4 pt-4">
+      <p class="text-sm text-slate-500 mt-2">
+        천안캠퍼스 · 평일 식단 안내
+      </p>
+    </header>
 
-  <section class="mb-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-   <!-- 주간 이동 버튼 -->
-<div class="mb-3 flex items-center justify-between gap-2">
-  <button id="prevWeekBtn"
-    class="flex flex-1 items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold hover:bg-indigo-50 dark:bg-slate-700 dark:hover:bg-slate-600">
-    <i class="fa-solid fa-chevron-left mr-1"></i> 지난주
-  </button>
+    <!-- 주간 이동 -->
+    <section class="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+      <div class="flex items-center justify-between gap-2">
+        <button
+          id="prevWeekBtn"
+          class="week-button"
+          type="button"
+        >
+          ← 이전 주
+        </button>
 
-  <button id="currentWeekBtn"
-    class="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700">
-    이번 주
-  </button>
+        <div class="text-center min-w-0">
+          <div id="weekLabel" class="font-bold text-sm sm:text-base">
+            주간 식단
+          </div>
+          <div id="weekRange" class="text-xs text-slate-500 mt-1">
+            날짜 확인 중
+          </div>
+        </div>
 
-  <button id="nextWeekBtn"
-    class="flex flex-1 items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold hover:bg-indigo-50 dark:bg-slate-700 dark:hover:bg-slate-600">
-    다음 주 <i class="fa-solid fa-chevron-right ml-1"></i>
-  </button>
-</div>
-    <div class="mb-3 flex items-center justify-between gap-2">
-      <button id="prevBtn"
-        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-indigo-50 dark:bg-slate-700 dark:hover:bg-slate-600">
-        <i class="fa-solid fa-chevron-left text-[10px]"></i> 이전 요일
+        <button
+          id="nextWeekBtn"
+          class="week-button"
+          type="button"
+        >
+          다음 주 →
+        </button>
+      </div>
+
+      <button
+        id="currentWeekBtn"
+        class="w-full mt-3 rounded-lg bg-slate-100 hover:bg-slate-200 py-2 text-sm font-semibold"
+        type="button"
+      >
+        이번 주로 돌아가기
       </button>
+    </section>
 
-      <button id="todayBtn"
-        class="flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700">
-        <i class="fa-solid fa-calendar-day"></i> 오늘
+    <!-- 날짜 이동 -->
+    <section class="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+      <div class="flex items-center justify-between gap-2 mb-4">
+        <button
+          id="prevBtn"
+          class="week-button"
+          type="button"
+        >
+          ← 이전 날
+        </button>
+
+        <div class="text-center">
+          <div id="selectedDateLabel" class="font-bold text-lg">
+            날짜 확인 중
+          </div>
+          <div id="selectedDayLabel" class="text-sm text-slate-500 mt-1">
+          </div>
+        </div>
+
+        <button
+          id="nextBtn"
+          class="week-button"
+          type="button"
+        >
+          다음 날 →
+        </button>
+      </div>
+
+      <div class="grid grid-cols-5 gap-2">
+        <button class="day-button" data-day="0" type="button">월</button>
+        <button class="day-button" data-day="1" type="button">화</button>
+        <button class="day-button" data-day="2" type="button">수</button>
+        <button class="day-button" data-day="3" type="button">목</button>
+        <button class="day-button" data-day="4" type="button">금</button>
+      </div>
+    </section>
+
+    <!-- 새로고침 -->
+    <section class="flex items-center justify-between gap-3 mb-4">
+      <div id="statusMessage" class="status-message">
+        식단을 불러올 준비가 되었습니다.
+      </div>
+
+      <button
+        id="refreshBtn"
+        class="shrink-0 rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-semibold"
+        type="button"
+      >
+        식단 새로고침
       </button>
-
-      <button id="nextBtn"
-        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-indigo-50 dark:bg-slate-700 dark:hover:bg-slate-600">
-        다음 요일 <i class="fa-solid fa-chevron-right text-[10px]"></i>
-      </button>
-    </div>
-
-    <div id="weekLabel" class="mb-2 text-center text-xs text-slate-500 dark:text-slate-400"></div>
-
-    <!-- 평일 5일만 표시 -->
-    <div id="dayTabs" class="grid grid-cols-5 gap-1 text-center text-xs font-semibold"></div>
-  </section>
-
-  <div class="mb-4 flex items-center justify-between gap-3 px-1 text-xs text-slate-500 dark:text-slate-400">
-    <div class="flex min-w-0 items-center gap-2">
-      <span id="statusDot" class="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500"></span>
-      <span id="statusText" aria-live="polite">식단표 데이터 불러오는 중...</span>
-    </div>
-    <button id="retryBtn" class="shrink-0 font-medium text-indigo-600 underline dark:text-indigo-400">
-      새로고침
-    </button>
-  </div>
-
-  <div id="errorBox"
-    class="mb-4 hidden rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200"></div>
-
-  <section class="space-y-4">
-
-    <article class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div class="mb-2 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-700">
-        <span class="flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400">
-          <i class="fa-solid fa-sun"></i> 아침 (조식)
-        </span>
-        <span id="tagBreakfast"
-          class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-400">대기</span>
-      </div>
-      <div id="menuBreakfast" class="space-y-1 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-        <p class="animate-pulse text-slate-400">식단을 읽어오는 중...</p>
-      </div>
-    </article>
-
-    <article class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div class="mb-2 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-700">
-        <span class="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
-          <i class="fa-solid fa-cloud-sun"></i> 점심 (중식)
-        </span>
-        <span id="tagLunch"
-          class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-400">대기</span>
-      </div>
-      <div id="menuLunch" class="space-y-1 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-        <p class="animate-pulse text-slate-400">식단을 읽어오는 중...</p>
-      </div>
-    </article>
-
-    <article class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div class="mb-2 flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-700">
-        <span class="flex items-center gap-2 font-bold text-purple-600 dark:text-purple-400">
-          <i class="fa-solid fa-moon"></i> 저녁 (석식)
-        </span>
-        <span id="tagDinner"
-          class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-400">대기</span>
-      </div>
-      <div id="menuDinner" class="space-y-1 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-        <p class="animate-pulse text-slate-400">식단을 읽어오는 중...</p>
-      </div>
-    </article>
-
-  </section>
-
-  <div class="mt-6 text-center">
-    <a id="sourceLink"
-      href="https://dormi.kongju.ac.kr/HOME/sub.php?code=041304"
-      target="_blank" rel="noopener noreferrer"
-      class="text-xs text-slate-400 underline hover:text-indigo-500">
-      생활관 원본 식단표 열기
-      <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-    </a>
-    <p class="mt-2 text-[11px] leading-relaxed text-slate-400">
-      현재 원본 페이지 설정: 천안캠퍼스
-    </p>
-  </div>
-
-</main>
-
-<script>
-(() => {
-  'use strict';
-
-  // Cloudflare Worker 주소
-  const WORKER_URL = 'https://meal.curly-base-322e.workers.dev/';
-
-  // 041301=은행사/홍익사/해오름집
-  // 041302=비전/블룸하우스
-  // 041303=드림하우스
-  // 041304=천안
-  // 041305=예산
-  const SOURCE_CODE = '041304';
-  const SOURCE_URL = `https://dormi.kongju.ac.kr/HOME/sub.php?code=${SOURCE_CODE}`;
-
-  document.getElementById('sourceLink').href = SOURCE_URL;
-
-  // 월~금만 사용
-  const DAY_NAMES = ['월', '화', '수', '목', '금'];
-  const DAY_TO_INDEX = {
-    '월': 0,
-    '화': 1,
-    '수': 2,
-    '목': 3,
-    '금': 4
-  };
-
-  const mealKeys = ['breakfast', 'lunch', 'dinner'];
-
-  const mealElements = {
-    breakfast: 'menuBreakfast',
-    lunch: 'menuLunch',
-    dinner: 'menuDinner'
-  };
-
-  const tagElements = {
-    breakfast: 'tagBreakfast',
-    lunch: 'tagLunch',
-    dinner: 'tagDinner'
-  };
-
-  let weekly = emptyWeek();
-// 현재 조회 중인 주의 월요일
-function getMonday(date) {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  d.setDate(d.getDate() - mondayIndex(d));
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-let currentWeekMonday = getMonday(new Date());
-
-function formatDateParam(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-function getWeekRange() {
-  const start = new Date(currentWeekMonday);
-  const end = new Date(currentWeekMonday);
-  end.setDate(end.getDate() + 6);
-
-  return {
-    weekStart: formatDateParam(start),
-    weekEnd: formatDateParam(end)
-  };
-}
-
-function isCurrentWeek() {
-  return currentWeekMonday.getTime() === getMonday(new Date()).getTime();
-}
-
-
-  
-  // 월요일=0, 화요일=1, ..., 일요일=6
-  const weekdayTodayIdx = mondayIndex(new Date());
-
-  // 토요일이나 일요일에는 금요일을 기본 선택
-  let selectedDayIdx = Math.min(weekdayTodayIdx, 4);
-
-  // 주말에는 오늘 표시를 하지 않음
-  const todayIdx = weekdayTodayIdx < 5 ? weekdayTodayIdx : -1;
-
-  let dates = Array(5).fill('');
-
-  function emptyWeek() {
-    return {
-      breakfast: Array(5).fill(''),
-      lunch: Array(5).fill(''),
-      dinner: Array(5).fill('')
-    };
-  }
-
-  function mondayIndex(date) {
-    return (date.getDay() + 6) % 7;
-  }
-
-  function setStatus(message, state) {
-    document.getElementById('statusText').textContent = message;
-
-    const dot = document.getElementById('statusDot');
-
-    dot.className = 'inline-block h-2.5 w-2.5 shrink-0 rounded-full';
-
-    if (state === 'loading') {
-      dot.classList.add('bg-blue-500', 'animate-ping');
-    } else if (state === 'success') {
-      dot.classList.add('bg-emerald-500');
-    } else {
-      dot.classList.add('bg-rose-500');
-    }
-  }
-
-  function showError(message) {
-    const box = document.getElementById('errorBox');
-    box.textContent = message;
-    box.classList.remove('hidden');
-  }
-
-  function clearError() {
-    document.getElementById('errorBox').classList.add('hidden');
-  }
-
-  // 요일 탭 렌더링
-  function renderTabs() {
-    const holder = document.getElementById('dayTabs');
-    holder.replaceChildren();
-
-    DAY_NAMES.forEach((day, idx) => {
-      const btn = document.createElement('button');
-      const selected = idx === selectedDayIdx;
-
-      btn.className =
-        'relative flex flex-col items-center justify-center rounded-lg py-2 transition ' +
-        (
-          selected
-            ? 'bg-indigo-600 text-white shadow-md'
-            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700/50 dark:text-slate-300 dark:hover:bg-slate-600'
-        );
-
-      const dayLabel = document.createElement('span');
-      dayLabel.className = 'text-[10px] opacity-70';
-      dayLabel.textContent = day;
-
-      const dateLabel = document.createElement('span');
-      dateLabel.className = 'text-xs font-bold';
-
-      // 날짜를 10월 28일이 아니라 10/28 형식으로 표시
-      if (dates[idx]) {
-        const match = dates[idx].match(/(\d+)월\s*(\d+)일/);
-        dateLabel.textContent = match
-          ? `${Number(match[1])}/${Number(match[2])}`
-          : day;
-      } else {
-        dateLabel.textContent = day + '요일';
-      }
-
-      btn.append(dayLabel, dateLabel);
-
-      // 오늘 표시
-      if (idx === todayIdx) {
-        const marker = document.createElement('span');
-        marker.className = 'absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400';
-        btn.appendChild(marker);
-      }
-
-      btn.addEventListener('click', () => {
-        selectedDayIdx = idx;
-        renderTabs();
-        displayMenus();
-      });
-
-      holder.appendChild(btn);
-    });
-
-    const nonEmptyDate = dates.find(Boolean);
-
-    document.getElementById('weekLabel').textContent =
-      nonEmptyDate
-        ? '원본 식단표 기준 주간 메뉴'
-        : '요일을 선택해 식단을 확인하세요';
-  }
-
-  // 현재 시간대 식사 강조
-  function updateTags() {
-    const hour = new Date().getHours();
-
-    for (const key of mealKeys) {
-      const tag = document.getElementById(tagElements[key]);
-
-      tag.textContent = '식단';
-      tag.className =
-        'rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-400';
-    }
-
-    if (selectedDayIdx !== todayIdx) return;
-
-    let active = null;
-
-    if (hour >= 5 && hour < 10) {
-      active = 'breakfast';
-    } else if (hour >= 10 && hour < 15) {
-      active = 'lunch';
-    } else if (hour >= 15 && hour < 21) {
-      active = 'dinner';
-    }
-
-    if (active) {
-      const tag = document.getElementById(tagElements[active]);
-
-      tag.textContent = '오늘 식사 시간대';
-      tag.className =
-        'rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200';
-    }
-  }
-
-  // 식단 항목 출력
-  function renderMeal(raw) {
-    const container = document.createElement('div');
-
-    const lines = String(raw || '')
-      .replace(/\r/g, '')
-      .split('\n')
-      .map(s => s.replace(/\u00a0/g, ' ').trim())
-      .filter(Boolean);
-
-    if (!lines.length) {
-      const p = document.createElement('p');
-      p.className = 'italic text-slate-400';
-      p.textContent = '등록된 식단이 없습니다.';
-      container.appendChild(p);
-      return container;
-    }
-
-    for (const line of lines) {
-      const item = document.createElement('div');
-      item.className = 'meal-line py-0.5';
-
-      if (/kcal/i.test(line)) {
-        item.className =
-          'meal-line mt-2 text-xs font-semibold text-indigo-500 dark:text-indigo-400';
-
-        const icon = document.createElement('i');
-        icon.className = 'fa-solid fa-fire mr-1';
-
-        item.append(icon, document.createTextNode(line));
-      } else {
-        item.textContent = '• ' + line;
-      }
-
-      container.appendChild(item);
-    }
-
-    return container;
-  }
-
-  function displayMenus() {
-    updateTags();
-
-    for (const key of mealKeys) {
-      document
-        .getElementById(mealElements[key])
-        .replaceChildren(renderMeal(weekly[key][selectedDayIdx]));
-    }
-  }
-
-  // 원본 식단표 HTML 파싱
-  function parseSource(htmlText) {
-    const doc = new DOMParser().parseFromString(htmlText, 'text/html');
-
-    const rows = [
-      ...doc.querySelectorAll(
-        'table.food tbody tr, #food-info tbody tr, tbody tr'
-      )
+    </section>
+
+    <!-- 식단 표시 -->
+    <section id="mealContainer" class="grid gap-4 sm:grid-cols-3">
+      <article class="meal-card">
+        <h2 class="meal-title">아침</h2>
+        <div id="breakfast" class="meal-content">불러오는 중...</div>
+      </article>
+
+      <article class="meal-card">
+        <h2 class="meal-title">점심</h2>
+        <div id="lunch" class="meal-content">불러오는 중...</div>
+      </article>
+
+      <article class="meal-card">
+        <h2 class="meal-title">저녁</h2>
+        <div id="dinner" class="meal-content">불러오는 중...</div>
+      </article>
+    </section>
+
+    <footer class="mt-8 text-xs text-slate-400 leading-relaxed">
+      <p>식단 정보는 공주대학교 기숙사 홈페이지를 기준으로 표시합니다.</p>
+      <p class="mt-1">실제 제공 메뉴 및 운영 여부는 학교 공지사항을 확인해 주세요.</p>
+    </footer>
+
+  </main>
+
+  <script>
+    // ============================================
+    // 설정
+    // ============================================
+
+    const WORKER_URL =
+      "https://meal.curly-base-322e.workers.dev/";
+
+    const CACHE_PREFIX = "kongju_dorm_meals_v2_";
+
+    const DAY_NAMES = [
+      "월요일",
+      "화요일",
+      "수요일",
+      "목요일",
+      "금요일"
     ];
 
-    if (!rows.length) {
-      const title = doc.title || '';
-
-      if (/cloudflare|error|access denied|요청이 차단/i.test(htmlText.slice(0, 5000))) {
-        throw new Error('Worker가 식단표 대신 차단/오류 페이지를 반환했습니다.');
+    const MONTH_DAY_FORMATTER = new Intl.DateTimeFormat(
+      "ko-KR",
+      {
+        month: "numeric",
+        day: "numeric"
       }
-
-      throw new Error(
-        `식단표 표(tbody tr)를 찾지 못했습니다. 응답 제목: ${title || '(제목 없음)'}. Worker가 원본 HTML을 반환하는지 확인해 주세요.`
-      );
-    }
-
-    const next = emptyWeek();
-    const nextDates = Array(5).fill('');
-    let foundMealRows = 0;
-
-    for (const row of rows) {
-      const dayCell =
-        row.querySelector('[data-mqtitle="day"]') ||
-        row.querySelector('td:first-child');
-
-      if (!dayCell) continue;
-
-      const dayText = (dayCell.textContent || '').replace(/\s+/g, '');
-      const match = dayText.match(/[월화수목금토일]/);
-
-      if (!match) continue;
-
-      const idx = DAY_TO_INDEX[match[0]];
-
-      // 토요일과 일요일은 완전히 건너뜀
-      if (idx === undefined) continue;
-
-      const dateCell =
-        row.querySelector('[data-mqtitle="date"]') ||
-        row.querySelector('td:nth-child(2)');
-
-      if (dateCell) {
-        nextDates[idx] = (dateCell.textContent || '').trim();
-      }
-
-      const cells = {
-        breakfast:
-          row.querySelector('[data-mqtitle="breakfast"]') ||
-          row.querySelector('td:nth-child(3)'),
-
-        lunch:
-          row.querySelector('[data-mqtitle="lunch"]') ||
-          row.querySelector('td:nth-child(4)'),
-
-        dinner:
-          row.querySelector('[data-mqtitle="dinner"]') ||
-          row.querySelector('td:nth-child(5)')
-      };
-
-      for (const key of mealKeys) {
-        if (!cells[key]) continue;
-
-        const html = cells[key].innerHTML
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/(?:p|div|li)\s*>/gi, '\n');
-
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-
-        next[key][idx] = (temp.textContent || '')
-          .replace(/\u00a0/g, ' ')
-          .trim();
-      }
-
-      foundMealRows++;
-    }
-
-    if (!foundMealRows) {
-      throw new Error('요일 행은 있지만 식단 데이터를 읽지 못했습니다.');
-    }
-
-    const hasAnyMeal = mealKeys.some(key =>
-      next[key].some(value => value.trim())
     );
 
-    if (!hasAnyMeal) {
-      throw new Error(
-        '요일 표는 찾았지만 모든 끼니가 비어 있습니다. Worker가 올바른 캠퍼스 페이지를 가져오는지 확인해 주세요.'
+    // 현재 보고 있는 주의 월요일
+    let currentWeekMonday = getMonday(new Date());
+
+    // 현재 선택된 평일 인덱스: 월요일 0 ~ 금요일 4
+    let selectedDayIndex = getWeekdayIndex(new Date());
+
+    // 주간 식단 데이터
+    let mealsByDate = {};
+
+    // 중복 요청 방지
+    let isLoading = false;
+
+
+    // ============================================
+    // 날짜 관련 함수
+    // ============================================
+
+    function dateOnly(date) {
+      return new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
       );
     }
 
-    return {
-      data: next,
-      dates: nextDates
-    };
-  }
-
-  // 이번 주 월요일 날짜를 기준으로 캐시 키 생성
-  function getWeekCacheKey() {
-    const now = new Date();
-
-    const monday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
-
-    monday.setDate(monday.getDate() - mondayIndex(monday));
-
-    const yyyy = monday.getFullYear();
-    const mm = String(monday.getMonth() + 1).padStart(2, '0');
-    const dd = String(monday.getDate()).padStart(2, '0');
-
-    return `kongju-dorm-meals:${SOURCE_CODE}:${yyyy}-${mm}-${dd}`;
-  }
-
-  // 식단을 브라우저에 저장
-  function saveMealsToCache(data, dateList) {
-    try {
-      localStorage.setItem(
-        getWeekCacheKey(),
-        JSON.stringify({
-          savedAt: Date.now(),
-          data,
-          dates: dateList
-        })
-      );
-    } catch (error) {
-      console.warn('[식단표] 브라우저 캐시에 저장하지 못했습니다.', error);
-    }
-  }
-
-  // 저장된 식단 불러오기
-  function loadMealsFromCache() {
-    try {
-      const raw = localStorage.getItem(getWeekCacheKey());
-
-      if (!raw) return false;
-
-      const cached = JSON.parse(raw);
-
-      if (!cached || !cached.data || !Array.isArray(cached.dates)) {
-        return false;
-      }
-
-      if (!mealKeys.every(key =>
-        Array.isArray(cached.data[key]) &&
-        cached.data[key].length === 5
-      )) {
-        return false;
-      }
-
-      if (!mealKeys.some(key =>
-        cached.data[key].some(value => String(value || '').trim())
-      )) {
-        return false;
-      }
-
-      weekly = cached.data;
-      dates = cached.dates;
-
-      selectedDayIdx = dateIndexForToday(dates) ?? Math.min(todayIdx < 0 ? 4 : todayIdx, 4);
-
-      renderTabs();
-      displayMenus();
-
-      const savedTime = cached.savedAt
-        ? new Date(cached.savedAt).toLocaleString('ko-KR', {
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        : '';
-
-      setStatus(
-        `저장된 이번 주 식단 표시 중${savedTime ? ` · ${savedTime} 저장` : ''}`,
-        'success'
-      );
-
-      return true;
-
-    } catch (error) {
-      console.warn('[식단표] 캐시를 읽지 못했습니다.', error);
-      return false;
-    }
-  }
-
-  // 식단 데이터 불러오기
-  async function fetchMeals(forceRefresh = false) {
-    const retry = document.getElementById('retryBtn');
-
-    // 저장된 캐시가 있으면 네트워크 요청 없이 표시
-    if (!forceRefresh && loadMealsFromCache()) {
-      clearError();
-      return;
+    function addDays(date, amount) {
+      const result = new Date(date);
+      result.setDate(result.getDate() + amount);
+      return result;
     }
 
-    retry.disabled = true;
-    retry.textContent = '불러오는 중...';
+    function getMonday(date) {
+      const result = dateOnly(date);
+      const day = result.getDay();
 
-    clearError();
+      // 일요일이면 6일 전, 그 외에는 월요일까지 이동
+      const diff = day === 0 ? -6 : 1 - day;
 
-    setStatus(
-      forceRefresh
-        ? '최신 식단을 다시 불러오는 중...'
-        : '식단 데이터를 처음 불러오는 중...',
-      'loading'
-    );
+      result.setDate(result.getDate() + diff);
 
-    try {
-      const response = await fetch(WORKER_URL, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: {
-          'Accept': 'text/html,application/json;q=0.9,*/*;q=0.8'
-        }
+      return result;
+    }
+
+    function getWeekdayIndex(date) {
+      const day = date.getDay();
+
+      if (day === 0) return 0;
+      if (day === 6) return 4;
+
+      return day - 1;
+    }
+
+    function getSelectedDate() {
+      return addDays(currentWeekMonday, selectedDayIndex);
+    }
+
+    function formatDate(date) {
+      return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    function formatFullDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatApiDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+
+      return `${year}${month}${day}`;
+    }
+
+    function getWeekCacheKey() {
+      return CACHE_PREFIX + formatFullDate(currentWeekMonday);
+    }
+
+    function getWeekEnd() {
+      return addDays(currentWeekMonday, 4);
+    }
+
+    function isSameDate(a, b) {
+      return formatFullDate(a) === formatFullDate(b);
+    }
+
+
+    // ============================================
+    // 화면 표시 함수
+    // ============================================
+
+    function updateDateControls() {
+      const weekEnd = getWeekEnd();
+      const selectedDate = getSelectedDate();
+
+      document.getElementById("weekLabel").textContent =
+        `${currentWeekMonday.getFullYear()}년 주간 식단`;
+
+      document.getElementById("weekRange").textContent =
+        `${formatDate(currentWeekMonday)} ~ ${formatDate(weekEnd)}`;
+
+      document.getElementById("selectedDateLabel").textContent =
+        formatDate(selectedDate);
+
+      document.getElementById("selectedDayLabel").textContent =
+        DAY_NAMES[selectedDayIndex];
+
+      document.querySelectorAll(".day-button").forEach((button) => {
+        const index = Number(button.dataset.day);
+
+        button.classList.toggle(
+          "active",
+          index === selectedDayIndex
+        );
       });
 
-      if (!response.ok) {
-        throw new Error(`Worker HTTP 오류 (${response.status})`);
+      const todayMonday = getMonday(new Date());
+
+      document.getElementById("currentWeekBtn").disabled =
+        isSameDate(currentWeekMonday, todayMonday);
+
+      document.getElementById("currentWeekBtn").classList.toggle(
+        "opacity-50",
+        isSameDate(currentWeekMonday, todayMonday)
+      );
+    }
+
+    function setStatus(message) {
+      document.getElementById("statusMessage").textContent = message;
+    }
+
+    function showMealText(elementId, text) {
+      const element = document.getElementById(elementId);
+
+      // 메뉴를 HTML로 삽입하지 않아 외부 HTML 실행을 방지
+      element.textContent = text || "등록된 식단 정보가 없습니다.";
+    }
+
+    function renderSelectedDay() {
+      updateDateControls();
+
+      const dateKey = formatFullDate(getSelectedDate());
+      const meal = mealsByDate[dateKey];
+
+      if (!meal) {
+        showMealText("breakfast", "식단 정보가 없습니다.");
+        showMealText("lunch", "식단 정보가 없습니다.");
+        showMealText("dinner", "식단 정보가 없습니다.");
+        return;
       }
 
-      const contentType = response.headers.get('content-type') || '';
-      const body = await response.text();
+      showMealText("breakfast", meal.breakfast);
+      showMealText("lunch", meal.lunch);
+      showMealText("dinner", meal.dinner);
+    }
 
-      if (!body.trim()) {
-        throw new Error('Worker 응답이 비어 있습니다.');
-      }
 
-      let htmlText = body;
-      let parsed;
+    // ============================================
+    // 캐시 관련 함수
+    // ============================================
 
-      // Worker가 JSON을 반환하는 경우도 지원
-      if (contentType.includes('application/json') || /^\s*\{/.test(body)) {
-        let json;
+    function loadMealsFromCache() {
+      try {
+        const raw = localStorage.getItem(getWeekCacheKey());
 
-        try {
-          json = JSON.parse(body);
-        } catch (_) {
-          throw new Error('Worker가 JSON이라고 표시했지만 JSON 형식이 올바르지 않습니다.');
+        if (!raw) {
+          return false;
         }
 
-        htmlText = json.html || json.data || json.body || '';
+        const cached = JSON.parse(raw);
 
-        if (!htmlText && Array.isArray(json.rows)) {
-          const mapped = emptyWeek();
-          const mappedDates = Array(5).fill('');
+        if (
+          !cached ||
+          typeof cached.data !== "object" ||
+          !cached.data
+        ) {
+          return false;
+        }
 
-          json.rows.forEach(item => {
-            const day = String(item.day || item.weekday || '')
-              .replace(/\s/g, '')
-              .match(/[월화수목금토일]/)?.[0];
+        mealsByDate = cached.data;
 
-            // 토·일 데이터는 저장하지 않음
-            if (!day || DAY_TO_INDEX[day] === undefined) return;
+        renderSelectedDay();
 
-            const i = DAY_TO_INDEX[day];
+        const savedAt = cached.savedAt
+          ? new Date(cached.savedAt)
+          : null;
 
-            mappedDates[i] = item.date || '';
-            mapped.breakfast[i] = item.breakfast || '';
-            mapped.lunch[i] = item.lunch || '';
-            mapped.dinner[i] = item.dinner || '';
-          });
+        if (savedAt && !Number.isNaN(savedAt.getTime())) {
+          setStatus(
+            `저장된 식단 표시 중 · ${savedAt.toLocaleString("ko-KR")} 저장`
+          );
+        } else {
+          setStatus("저장된 식단 표시 중");
+        }
 
-          if (!mealKeys.some(key => mapped[key].some(Boolean))) {
-            throw new Error('Worker JSON 응답에 식단 데이터가 없습니다.');
+        return true;
+      } catch (error) {
+        console.warn("캐시 읽기 실패:", error);
+        return false;
+      }
+    }
+
+    function saveMealsToCache() {
+      try {
+        const payload = {
+          savedAt: new Date().toISOString(),
+          data: mealsByDate
+        };
+
+        localStorage.setItem(
+          getWeekCacheKey(),
+          JSON.stringify(payload)
+        );
+      } catch (error) {
+        console.warn("캐시 저장 실패:", error);
+      }
+    }
+
+
+    // ============================================
+    // 학교 식단 페이지 파싱
+    // ============================================
+
+    function cleanText(value) {
+      return String(value || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function findMealCell(row, name, fallbackIndex) {
+      const selectors = {
+        breakfast: [
+          '[data-mqtitle="breakfast"]',
+          '[data-title="breakfast"]'
+        ],
+        lunch: [
+          '[data-mqtitle="lunch"]',
+          '[data-title="lunch"]'
+        ],
+        dinner: [
+          '[data-mqtitle="dinner"]',
+          '[data-title="dinner"]'
+        ]
+      };
+
+      for (const selector of selectors[name] || []) {
+        const element = row.querySelector(selector);
+
+        if (element) {
+          return cleanText(element.innerText || element.textContent);
+        }
+      }
+
+      const cells = row.querySelectorAll("td");
+
+      if (cells[fallbackIndex]) {
+        return cleanText(
+          cells[fallbackIndex].innerText ||
+          cells[fallbackIndex].textContent
+        );
+      }
+
+      return "";
+    }
+
+    function parseDateFromRow(row) {
+      const cells = row.querySelectorAll("td");
+
+      if (cells.length === 0) {
+        return null;
+      }
+
+      let dateText = "";
+
+      const dateElement =
+        row.querySelector('[data-mqtitle="date"]') ||
+        row.querySelector('[data-title="date"]') ||
+        cells[1];
+
+      if (dateElement) {
+        dateText = cleanText(
+          dateElement.innerText || dateElement.textContent
+        );
+      }
+
+      // 예: 10월 28일, 10.28, 2026-10-28
+      let match = dateText.match(
+        /(\d{4})\s*[.-]\s*(\d{1,2})\s*[.-]\s*(\d{1,2})/
+      );
+
+      if (match) {
+        const date = new Date(
+          Number(match[1]),
+          Number(match[2]) - 1,
+          Number(match[3])
+        );
+
+        if (!Number.isNaN(date.getTime())) {
+          return date;
+        }
+      }
+
+      match = dateText.match(
+        /(\d{1,2})\s*월\s*(\d{1,2})\s*일/
+      );
+
+      if (match) {
+        const month = Number(match[1]);
+        const day = Number(match[2]);
+
+        // 학교 페이지에 연도가 없을 때 주간 날짜의 연도를 사용
+        let year = currentWeekMonday.getFullYear();
+
+        // 주간 시작일과 종료일에 맞춰 연도 보정
+        if (
+          currentWeekMonday.getMonth() === 11 &&
+          month === 1
+        ) {
+          year += 1;
+        } else if (
+          currentWeekMonday.getMonth() === 0 &&
+          month === 12
+        ) {
+          year -= 1;
+        }
+
+        const date = new Date(year, month - 1, day);
+
+        if (
+          date.getMonth() === month - 1 &&
+          date.getDate() === day
+        ) {
+          return date;
+        }
+      }
+
+      match = dateText.match(
+        /(\d{1,2})\s*[./-]\s*(\d{1,2})(?!\d)/
+      );
+
+      if (match) {
+        const month = Number(match[1]);
+        const day = Number(match[2]);
+
+        let year = currentWeekMonday.getFullYear();
+
+        if (
+          currentWeekMonday.getMonth() === 11 &&
+          month === 1
+        ) {
+          year += 1;
+        } else if (
+          currentWeekMonday.getMonth() === 0 &&
+          month === 12
+        ) {
+          year -= 1;
+        }
+
+        const date = new Date(year, month - 1, day);
+
+        if (
+          date.getMonth() === month - 1 &&
+          date.getDate() === day
+        ) {
+          return date;
+        }
+      }
+
+      // 날짜 셀을 찾지 못한 경우 첫 번째 셀에서 요일을 확인
+      const firstCell = cleanText(
+        cells[0].innerText || cells[0].textContent
+      );
+
+      const dayMatch = firstCell.match(
+        /(월|화|수|목|금)\s*요일?/
+      );
+
+      if (dayMatch) {
+        const dayIndex = ["월", "화", "수", "목", "금"]
+          .indexOf(dayMatch[1]);
+
+        if (dayIndex >= 0) {
+          return addDays(currentWeekMonday, dayIndex);
+        }
+      }
+
+      return null;
+    }
+
+    function parseMealsFromHtml(html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      const result = {};
+
+      // 표 구조가 조금씩 달라질 수 있으므로 여러 선택자를 확인
+      const rows = Array.from(
+        doc.querySelectorAll(
+          "table.food tbody tr, #food-info tbody tr, table tbody tr"
+        )
+      );
+
+      for (const row of rows) {
+        const date = parseDateFromRow(row);
+
+        if (!date) {
+          continue;
+        }
+
+        const monday = currentWeekMonday;
+        const friday = getWeekEnd();
+
+        // 현재 조회 중인 주의 평일만 반영
+        if (date < monday || date > friday) {
+          continue;
+        }
+
+        const dateKey = formatFullDate(date);
+
+        result[dateKey] = {
+          breakfast: findMealCell(row, "breakfast", 2),
+          lunch: findMealCell(row, "lunch", 3),
+          dinner: findMealCell(row, "dinner", 4)
+        };
+      }
+
+      // 표 선택자가 일치하지 않을 때 날짜 정보가 포함된 행을 추가 탐색
+      if (Object.keys(result).length === 0) {
+        const allRows = Array.from(doc.querySelectorAll("tr"));
+
+        for (const row of allRows) {
+          const date = parseDateFromRow(row);
+
+          if (!date) {
+            continue;
           }
 
-          parsed = {
-            data: mapped,
-            dates: mappedDates
+          if (
+            date < currentWeekMonday ||
+            date > getWeekEnd()
+          ) {
+            continue;
+          }
+
+          const cells = row.querySelectorAll("td");
+
+          if (cells.length < 4) {
+            continue;
+          }
+
+          result[formatFullDate(date)] = {
+            breakfast: cleanText(
+              cells[2].innerText || cells[2].textContent
+            ),
+            lunch: cleanText(
+              cells[3].innerText || cells[3].textContent
+            ),
+            dinner: cleanText(
+              cells[4]
+                ? cells[4].innerText || cells[4].textContent
+                : ""
+            )
           };
         }
+      }
 
-        if (!htmlText && !parsed) {
-          throw new Error(
-            json.error ||
-            'JSON 응답에서 html/data/body 또는 rows 필드를 찾지 못했습니다.'
+      return result;
+    }
+
+
+    // ============================================
+    // 식단 가져오기
+    // ============================================
+
+    async function fetchMeals(forceRefresh = false) {
+      if (isLoading) {
+        return;
+      }
+
+      if (!forceRefresh && loadMealsFromCache()) {
+        return;
+      }
+
+      isLoading = true;
+
+      const container = document.getElementById("mealContainer");
+      const refreshButton = document.getElementById("refreshBtn");
+
+      container.classList.add("loading");
+      refreshButton.disabled = true;
+      refreshButton.textContent = "불러오는 중...";
+
+      setStatus("학교 홈페이지에서 식단을 가져오는 중입니다.");
+
+      try {
+        const weekStart = formatApiDate(currentWeekMonday);
+        const weekEnd = formatApiDate(getWeekEnd());
+
+        const requestUrl = new URL(WORKER_URL);
+
+        requestUrl.searchParams.set("weekStart", weekStart);
+        requestUrl.searchParams.set("weekEnd", weekEnd);
+
+        // 강제 새로고침 시 브라우저 캐시도 우회
+        if (forceRefresh) {
+          requestUrl.searchParams.set(
+            "_refresh",
+            String(Date.now())
           );
         }
+
+        const response = await fetch(requestUrl.toString(), {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        const responseText = await response.text();
+
+        if (!response.ok) {
+          let errorMessage = `요청 실패: HTTP ${response.status}`;
+
+          try {
+            const errorData = JSON.parse(responseText);
+
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (_) {
+            // 응답이 JSON이 아니면 기본 오류 메시지를 사용
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        if (
+          /"error"\s*:/.test(responseText.slice(0, 500)) &&
+          responseText.trim().startsWith("{")
+        ) {
+          try {
+            const errorData = JSON.parse(responseText);
+            throw new Error(
+              errorData.error || "워커 요청에 실패했습니다."
+            );
+          } catch (error) {
+            if (error instanceof Error && error.message) {
+              throw error;
+            }
+          }
+        }
+
+        const parsedMeals = parseMealsFromHtml(responseText);
+
+        if (Object.keys(parsedMeals).length === 0) {
+          throw new Error(
+            "식단 데이터를 찾지 못했습니다. 학교 홈페이지의 표 구조나 날짜 형식을 확인해야 합니다."
+          );
+        }
+
+        mealsByDate = parsedMeals;
+
+        saveMealsToCache();
+        renderSelectedDay();
+
+        setStatus(
+          `식단을 업데이트했습니다. (${Object.keys(parsedMeals).length}일)`
+        );
+      } catch (error) {
+        console.error("식단 가져오기 실패:", error);
+
+        // 요청 실패 시 캐시가 있다면 기존 식단 유지
+        const cachedSuccessfully = loadMealsFromCache();
+
+        if (cachedSuccessfully) {
+          setStatus(
+            `최신 식단을 가져오지 못했습니다. 저장된 식단을 표시합니다. (${error.message})`
+          );
+        } else {
+          mealsByDate = {};
+
+          showMealText("breakfast", "식단을 불러오지 못했습니다.");
+          showMealText("lunch", "식단을 불러오지 못했습니다.");
+          showMealText("dinner", "식단을 불러오지 못했습니다.");
+
+          setStatus(`오류: ${error.message}`);
+        }
+      } finally {
+        isLoading = false;
+
+        container.classList.remove("loading");
+        refreshButton.disabled = false;
+        refreshButton.textContent = "식단 새로고침";
       }
+    }
 
-      if (!parsed) {
-        parsed = parseSource(htmlText);
-      }
 
-      weekly = parsed.data;
-      dates = parsed.dates;
+    // ============================================
+    // 주간 이동
+    // ============================================
 
-      selectedDayIdx =
-        dateIndexForToday(dates) ??
-        Math.min(todayIdx < 0 ? 4 : todayIdx, 4);
-
-      renderTabs();
-      displayMenus();
-
-      // 성공한 식단을 이번 주 캐시에 저장
-      saveMealsToCache(weekly, dates);
-
-      setStatus('식단 연동 성공 · 이번 주 식단 저장 완료', 'success');
-
-    } catch (error) {
-      console.error('[식단표]', error);
-
-      setStatus('식단을 새로 불러오지 못했습니다.', 'error');
-
-      showError(
-        `${error.message} 기존에 저장된 식단이 있다면 화면에는 유지됩니다. 잠시 후 새로고침을 다시 시도하거나 원본 식단표를 확인해 주세요.`
+    function moveWeek(amount) {
+      currentWeekMonday = addDays(
+        currentWeekMonday,
+        amount * 7
       );
 
-    } finally {
-      retry.disabled = false;
-      retry.textContent = '새로고침';
+      selectedDayIndex = 0;
+
+      mealsByDate = {};
+
+      updateDateControls();
+
+      // 이동한 주에 해당하는 캐시를 사용하거나 새로 요청
+      fetchMeals(false);
     }
-  }
 
-  // 오늘 날짜에 해당하는 요일 인덱스 찾기
-  function dateIndexForToday(dateStrings) {
-    const now = new Date();
+    function goToCurrentWeek() {
+      currentWeekMonday = getMonday(new Date());
+      selectedDayIndex = getWeekdayIndex(new Date());
 
-    const today =
-      `${now.getMonth() + 1}월 ${now.getDate()}일`
-        .replace(/\s/g, '');
+      mealsByDate = {};
 
-    const idx = dateStrings.findIndex(s =>
-      String(s).replace(/\s/g, '').includes(today)
-    );
+      updateDateControls();
 
-    return idx >= 0 ? idx : null;
-  }
-
-  // 이전 요일: 월요일에서 더 이전으로 넘어가면 금요일
-  document.getElementById('prevBtn').addEventListener('click', () => {
-    selectedDayIdx = (selectedDayIdx + 4) % 5;
-    renderTabs();
-    displayMenus();
-  });
-
-  // 다음 요일: 금요일 다음은 월요일
-  document.getElementById('nextBtn').addEventListener('click', () => {
-    selectedDayIdx = (selectedDayIdx + 1) % 5;
-    renderTabs();
-    displayMenus();
-  });
-
-  // 오늘 버튼
-  document.getElementById('todayBtn').addEventListener('click', () => {
-    selectedDayIdx =
-      dateIndexForToday(dates) ??
-      Math.min(todayIdx < 0 ? 4 : todayIdx, 4);
-
-    renderTabs();
-    displayMenus();
-  });
-
-  // 수동 새로고침은 캐시를 무시하고 Worker에서 다시 가져옴
-  document.getElementById('retryBtn').addEventListener('click', () => {
-    fetchMeals(true);
-  });
-
-  // 다크 모드 전환
-  document.getElementById('themeToggle').addEventListener('click', () => {
-    document.documentElement.classList.toggle('dark');
-
-    try {
-      localStorage.setItem(
-        'meal-theme',
-        document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-      );
-    } catch (_) {}
-  });
-
-  // 저장된 테마 적용
-  try {
-    if (localStorage.getItem('meal-theme') === 'dark') {
-      document.documentElement.classList.add('dark');
+      fetchMeals(false);
     }
-  } catch (_) {}
 
-  // 최초 실행
-  renderTabs();
-  fetchMeals(false);
 
-})();
-</script>
+    // ============================================
+    // 요일 이동
+    // ============================================
 
+    function moveDay(amount) {
+      const nextDate = addDays(getSelectedDate(), amount);
+
+      // 토요일·일요일은 표시하지 않고 인접 주의 평일로 이동
+      if (nextDate.getDay() === 6) {
+        currentWeekMonday = addDays(currentWeekMonday, 7);
+        selectedDayIndex = 0;
+      } else if (nextDate.getDay() === 0) {
+        currentWeekMonday = addDays(currentWeekMonday, -7);
+        selectedDayIndex = 4;
+      } else {
+        selectedDayIndex = getWeekdayIndex(nextDate);
+      }
+
+      mealsByDate = {};
+
+      updateDateControls();
+
+      fetchMeals(false);
+    }
+
+
+    // ============================================
+    // 버튼 이벤트
+    // ============================================
+
+    document
+      .getElementById("prevWeekBtn")
+      .addEventListener("click", () => {
+        moveWeek(-1);
+      });
+
+    document
+      .getElementById("nextWeekBtn")
+      .addEventListener("click", () => {
+        moveWeek(1);
+      });
+
+    document
+      .getElementById("currentWeekBtn")
+      .addEventListener("click", () => {
+        goToCurrentWeek();
+      });
+
+    document
+      .getElementById("prevBtn")
+      .addEventListener("click", () => {
+        moveDay(-1);
+      });
+
+    document
+      .getElementById("nextBtn")
+      .addEventListener("click", () => {
+        moveDay(1);
+      });
+
+    document
+      .querySelectorAll(".day-button")
+      .forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedDayIndex = Number(button.dataset.day);
+
+          renderSelectedDay();
+
+          // 해당 날짜의 데이터가 없으면 그 주 식단을 요청
+          const key = formatFullDate(getSelectedDate());
+
+          if (!mealsByDate[key]) {
+            fetchMeals(false);
+          }
+        });
+      });
+
+    document
+      .getElementById("refreshBtn")
+      .addEventListener("click", () => {
+        fetchMeals(true);
+      });
+
+
+    // ============================================
+    // 최초 실행
+    // ============================================
+
+    updateDateControls();
+
+    // 먼저 캐시를 표시하고, 캐시가 없으면 서버에서 가져오기
+    if (!loadMealsFromCache()) {
+      fetchMeals(true);
+    }
+  </script>
 </body>
 </html>
