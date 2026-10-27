@@ -34,7 +34,7 @@
       <button id="nextBtn" class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-indigo-50 dark:bg-slate-700 dark:hover:bg-slate-600">다음 요일 <i class="fa-solid fa-chevron-right text-[10px]"></i></button>
     </div>
     <div id="weekLabel" class="mb-2 text-center text-xs text-slate-500 dark:text-slate-400"></div>
-    <div id="dayTabs" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
+    <div id="dayTabs" class="grid grid-cols-5 gap-1 text-center text-xs font-semibold"></div>
   </section>
 
   <div class="mb-4 flex items-center justify-between gap-3 px-1 text-xs text-slate-500 dark:text-slate-400">
@@ -89,18 +89,19 @@
   const SOURCE_URL = `https://dormi.kongju.ac.kr/HOME/sub.php?code=${SOURCE_CODE}`;
   document.getElementById('sourceLink').href = SOURCE_URL;
 
-  const DAY_NAMES = ['월', '화', '수', '목', '금', '토', '일'];
-  const DAY_TO_INDEX = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+  const DAY_NAMES = ['월', '화', '수', '목', '금'];
+  const DAY_TO_INDEX = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4 };
   const mealKeys = ['breakfast', 'lunch', 'dinner'];
   const mealElements = { breakfast: 'menuBreakfast', lunch: 'menuLunch', dinner: 'menuDinner' };
   const tagElements = { breakfast: 'tagBreakfast', lunch: 'tagLunch', dinner: 'tagDinner' };
   let weekly = emptyWeek();
-  let selectedDayIdx = mondayIndex(new Date());
-  const todayIdx = selectedDayIdx;
-  let dates = Array(7).fill('');
+  const weekdayTodayIdx = mondayIndex(new Date());
+  let selectedDayIdx = Math.min(weekdayTodayIdx, 4); // 주말에는 금요일을 기본 표시
+  const todayIdx = weekdayTodayIdx < 5 ? weekdayTodayIdx : -1;
+  let dates = Array(5).fill('');
 
   function emptyWeek() {
-    return { breakfast: Array(7).fill(''), lunch: Array(7).fill(''), dinner: Array(7).fill('') };
+    return { breakfast: Array(5).fill(''), lunch: Array(5).fill(''), dinner: Array(5).fill('') };
   }
   function mondayIndex(date) {
     return (date.getDay() + 6) % 7;
@@ -217,7 +218,7 @@
     }
 
     const next = emptyWeek();
-    const nextDates = Array(7).fill('');
+    const nextDates = Array(5).fill('');
     let foundMealRows = 0;
 
     for (const row of rows) {
@@ -227,6 +228,7 @@
       const match = dayText.match(/[월화수목금토일]/);
       if (!match) continue;
       const idx = DAY_TO_INDEX[match[0]];
+      if (idx === undefined) continue; // 토·일은 식단표에서 제외
       const dateCell = row.querySelector('[data-mqtitle="date"]') || row.querySelector('td:nth-child(2)');
       if (dateCell) nextDates[idx] = (dateCell.textContent || '').trim();
 
@@ -285,7 +287,7 @@
       if (!raw) return false;
       const cached = JSON.parse(raw);
       if (!cached || !cached.data || !Array.isArray(cached.dates)) return false;
-      if (!mealKeys.every(key => Array.isArray(cached.data[key]) && cached.data[key].length === 7)) return false;
+      if (!mealKeys.every(key => Array.isArray(cached.data[key]) && cached.data[key].length === 5)) return false;
       if (!mealKeys.some(key => cached.data[key].some(value => String(value || '').trim()))) return false;
 
       weekly = cached.data;
@@ -343,10 +345,10 @@
         htmlText = json.html || json.data || json.body || '';
         if (!htmlText && Array.isArray(json.rows)) {
           const mapped = emptyWeek();
-          const mappedDates = Array(7).fill('');
+          const mappedDates = Array(5).fill('');
           json.rows.forEach(item => {
             const day = String(item.day || item.weekday || '').replace(/\s/g, '').match(/[월화수목금토일]/)?.[0];
-            if (!day) return;
+            if (!day || DAY_TO_INDEX[day] === undefined) return; // 토·일 제외
             const i = DAY_TO_INDEX[day];
             mappedDates[i] = item.date || '';
             mapped.breakfast[i] = item.breakfast || '';
@@ -390,10 +392,10 @@
   }
 
   document.getElementById('prevBtn').addEventListener('click', () => {
-    selectedDayIdx = (selectedDayIdx + 6) % 7; renderTabs(); displayMenus();
+    selectedDayIdx = (selectedDayIdx + 4) % 5; renderTabs(); displayMenus();
   });
   document.getElementById('nextBtn').addEventListener('click', () => {
-    selectedDayIdx = (selectedDayIdx + 1) % 7; renderTabs(); displayMenus();
+    selectedDayIdx = (selectedDayIdx + 1) % 5; renderTabs(); displayMenus();
   });
   document.getElementById('todayBtn').addEventListener('click', () => {
     selectedDayIdx = dateIndexForToday(dates) ?? todayIdx; renderTabs(); displayMenus();
