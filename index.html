@@ -31,10 +31,8 @@
 
   <main class="max-w-md mx-auto px-4 pt-4">
 
-    <!-- 어제 / 오늘 / 내일 네비게이션 컨트롤러 -->
+    <!-- 날짜 이동 네비게이션 -->
     <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 mb-4">
-      
-      <!-- 날짜 이동 버튼 (어제 / 오늘 / 내일) -->
       <div class="flex items-center justify-between gap-2 mb-3">
         <button id="prevBtn" class="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1">
           <i class="fa-solid fa-chevron-left text-[10px]"></i> 어제
@@ -48,22 +46,16 @@
       </div>
 
       <!-- 요일 직접 선택 탭 -->
-      <div id="dayTabs" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold">
-        <!-- JS로 생성 -->
-      </div>
+      <div id="dayTabs" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold"></div>
     </section>
 
-    <!-- 연결 상태 및 프록시 설정 -->
+    <!-- 연결 상태 안내 -->
     <div class="flex items-center justify-between text-xs text-slate-500 mb-4 px-1">
       <div class="flex items-center gap-1.5">
         <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" id="statusDot"></span>
-        <span id="statusText">식단 데이터 읽어오는 중...</span>
+        <span id="statusText">데이터 연결 중...</span>
       </div>
-      <select id="proxySelect" class="bg-transparent border border-slate-300 dark:border-slate-700 rounded px-1 py-0.5 text-xs">
-        <option value="corsproxy">프록시 1 (Corsproxy)</option>
-        <option value="allorigins">프록시 2 (AllOrigins)</option>
-        <option value="mock">오프라인 테스트 모드</option>
-      </select>
+      <button id="retryBtn" class="text-xs text-indigo-600 dark:text-indigo-400 underline font-medium">재시도</button>
     </div>
 
     <!-- 끼니 카드 (아침, 점심, 저녁) -->
@@ -77,7 +69,7 @@
           <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagBreakfast">대기</span>
         </div>
         <div id="menuBreakfast" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
-          <p class="animate-pulse text-slate-400">식단 정보를 불러오는 중...</p>
+          <p class="animate-pulse text-slate-400">불러오는 중...</p>
         </div>
       </div>
 
@@ -90,7 +82,7 @@
           <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagLunch">대기</span>
         </div>
         <div id="menuLunch" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
-          <p class="animate-pulse text-slate-400">식단 정보를 불러오는 중...</p>
+          <p class="animate-pulse text-slate-400">불러오는 중...</p>
         </div>
       </div>
 
@@ -103,7 +95,7 @@
           <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagDinner">대기</span>
         </div>
         <div id="menuDinner" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
-          <p class="animate-pulse text-slate-400">식단 정보를 불러오는 중...</p>
+          <p class="animate-pulse text-slate-400">불러오는 중...</p>
         </div>
       </div>
     </section>
@@ -111,7 +103,7 @@
     <!-- 원본 페이지 링크 -->
     <div class="mt-6 text-center">
       <a href="https://dormi.kongju.ac.kr/HOME/sub.php?code=041304" target="_blank" rel="noopener noreferrer" class="text-xs text-slate-400 hover:text-indigo-500 underline">
-        공주대학교 생활관 원본 식단표 바로가기 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        공주대학교 생활관 원본 식단표 열기 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
       </a>
     </div>
   </main>
@@ -120,23 +112,20 @@
     const TARGET_URL = 'https://dormi.kongju.ac.kr/HOME/sub.php?code=041304';
     const daysName = ['월', '화', '수', '목', '금', '토', '일'];
 
-    // 오늘 요일 계산 (0: 월요일 ~ 6: 일요일)
     function getTodayIndex() {
       let day = new Date().getDay() - 1; 
       return day < 0 ? 6 : day;
     }
 
     const REAL_TODAY_IDX = getTodayIndex();
-    let selectedDayIdx = REAL_TODAY_IDX; // 접속 시 '오늘'로 자동 설정
+    let selectedDayIdx = REAL_TODAY_IDX;
 
-    // 파싱한 주간 식단 데이터 저장 (월~일: 0~6)
     let parsedWeeklyData = {
-      breakfast: Array(7).fill('식단 정보 없음'),
-      lunch: Array(7).fill('식단 정보 없음'),
-      dinner: Array(7).fill('식단 정보 없음')
+      breakfast: Array(7).fill('등록된 식단이 없습니다.'),
+      lunch: Array(7).fill('등록된 식단이 없습니다.'),
+      dinner: Array(7).fill('등록된 식단이 없습니다.')
     };
 
-    // 상단 요일 탭 UI
     function renderTabs() {
       const dayTabs = document.getElementById('dayTabs');
       dayTabs.innerHTML = '';
@@ -167,7 +156,6 @@
       });
     }
 
-    // 시간대별 식사 상태 태그 업데이트
     function updateMealTags() {
       const hour = new Date().getHours();
       const tagB = document.getElementById('tagBreakfast');
@@ -179,7 +167,6 @@
         t.className = "text-xs bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium"; 
       });
 
-      // 선택된 요일이 '오늘'일 때만 실시간 식사태그 표시
       if (selectedDayIdx === REAL_TODAY_IDX) {
         if (hour < 9) {
           tagB.innerText = "지금 식사 시간";
@@ -194,17 +181,17 @@
       }
     }
 
-    // 화면에 선택된 요일의 식단 표출
     function displaySelectedDayMenu() {
       updateMealTags();
 
       const formatText = (text) => {
-        if (!text || text.trim() === '' || text.includes('등록된 식단이 없습니다')) {
-          return '<p class="text-slate-400 italic">식단이 등록되지 않았습니다.</p>';
+        if (!text || text.trim() === '' || text.includes('없습니다')) {
+          return '<p class="text-slate-400 italic">등록된 식단이 없습니다.</p>';
         }
         return text.split(/<br\s*\/?>|\n/gi)
-                   .filter(item => item.trim() !== '')
-                   .map(item => `<div class="py-0.5">• ${item.trim()}</div>`)
+                   .map(item => item.replace(/<[^>]*>?/gm, '').trim())
+                   .filter(item => item !== '')
+                   .map(item => `<div class="py-0.5">• ${item}</div>`)
                    .join('');
       };
 
@@ -213,80 +200,111 @@
       document.getElementById('menuDinner').innerHTML = formatText(parsedWeeklyData.dinner[selectedDayIdx]);
     }
 
-    // 학교 웹페이지에서 HTML 파싱 (서버리스 크롤러)
+    // 타임아웃 지원 fetch
+    async function fetchWithTimeout(url, options = {}, timeout = 6000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
+      }
+    }
+
+    // 다중 프록시를 순차 시도하는 자동 Fallback 크롤러
     async function fetchDormiMeal() {
-      const mode = document.getElementById('proxySelect').value;
       const statusText = document.getElementById('statusText');
       const statusDot = document.getElementById('statusDot');
 
-      if (mode === 'mock') {
-        statusText.innerText = '오프라인 샘플 데이터 표시 중';
-        statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-amber-500';
-        parsedWeeklyData = {
-          breakfast: Array(7).fill('쌀밥<br>콩나물국<br>제육볶음<br>배추김치'),
-          lunch: Array(7).fill('돈까스<br>우동<br>단무지<br>깍두기'),
-          dinner: Array(7).fill('잡곡밥<br>순두부찌개<br>계란말이<br>열무김치')
-        };
-        displaySelectedDayMenu();
-        return;
-      }
-
-      statusText.innerText = '공주대 기숙사 서버 동기화 중...';
+      statusText.innerText = '학교 서버 식단 읽어오는 중...';
       statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
 
-      try {
-        let fetchUrl = mode === 'corsproxy' 
-          ? `https://corsproxy.io/?${encodeURIComponent(TARGET_URL)}`
-          : `https://api.allorigins.win/get?url=${encodeURIComponent(TARGET_URL)}`;
+      // 순차적으로 시도할 프록시 목록
+      const proxyList = [
+        url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+        url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+        url => `https://thingproxy.freeboard.io/fetch/${url}`
+      ];
 
-        const res = await fetch(fetchUrl);
-        if (!res.ok) throw new Error('네트워크 응답 오류');
+      let rawHtml = null;
 
-        let htmlText = mode === 'allorigins' ? (await res.json()).contents : await res.text();
+      for (const getProxyUrl of proxyList) {
+        try {
+          const targetProxy = getProxyUrl(TARGET_URL);
+          const res = await fetchWithTimeout(targetProxy, {}, 5000);
+          
+          if (!res.ok) continue;
 
-        // DOM 파싱
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlText, 'text/html');
-        const table = doc.querySelector('table');
+          if (targetProxy.includes('allorigins')) {
+            const json = await res.json();
+            rawHtml = json.contents;
+          } else {
+            rawHtml = await res.text();
+          }
 
-        if (table) {
-          const rows = table.querySelectorAll('tr');
+          if (rawHtml && rawHtml.length > 500) {
+            break; // 성공적인 HTML 응답 획득시 반복 중단
+          }
+        } catch (e) {
+          console.warn('프록시 시도 실패, 다음 서비스 시도 중...', e);
+        }
+      }
 
-          rows.forEach(row => {
-            const cells = Array.from(row.querySelectorAll('td, th')).map(td => td.innerHTML);
-            const rowText = row.innerText || '';
+      // 파싱 시도
+      if (rawHtml) {
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(rawHtml, 'text/html');
+          const tables = doc.querySelectorAll('table');
 
-            if (rowText.includes('아침') || rowText.includes('조식')) {
-              cells.slice(1, 8).forEach((cellHtml, i) => { if(i < 7) parsedWeeklyData.breakfast[i] = cellHtml; });
-            } else if (rowText.includes('점심') || rowText.includes('중식')) {
-              cells.slice(1, 8).forEach((cellHtml, i) => { if(i < 7) parsedWeeklyData.lunch[i] = cellHtml; });
-            } else if (rowText.includes('저녁') || rowText.includes('석식')) {
-              cells.slice(1, 8).forEach((cellHtml, i) => { if(i < 7) parsedWeeklyData.dinner[i] = cellHtml; });
-            }
+          let found = false;
+          tables.forEach(table => {
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+              const rowText = row.innerText || '';
+              const cells = Array.from(row.querySelectorAll('td, th')).map(td => td.innerHTML);
+
+              if (rowText.includes('아침') || rowText.includes('조식')) {
+                cells.slice(1, 8).forEach((html, i) => { if(i < 7 && html) parsedWeeklyData.breakfast[i] = html; });
+                found = true;
+              } else if (rowText.includes('점심') || rowText.includes('중식')) {
+                cells.slice(1, 8).forEach((html, i) => { if(i < 7 && html) parsedWeeklyData.lunch[i] = html; });
+                found = true;
+              } else if (rowText.includes('저녁') || rowText.includes('석식')) {
+                cells.slice(1, 8).forEach((html, i) => { if(i < 7 && html) parsedWeeklyData.dinner[i] = html; });
+                found = true;
+              }
+            });
           });
 
-          statusText.innerText = '실시간 연동 완료';
-          statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-emerald-500';
-        } else {
-          throw new Error('식단표 테이블을 찾을 수 없습니다.');
+          if (found) {
+            statusText.innerText = '실시간 연동 완료';
+            statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-emerald-500';
+            displaySelectedDayMenu();
+            return;
+          }
+        } catch (parseErr) {
+          console.error('파싱 에러:', parseErr);
         }
-
-      } catch (err) {
-        console.warn('크롤링 실패 -> 샘플 데이터로 전환:', err);
-        statusText.innerText = '수신 실패 (오프라인 모드)';
-        statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-rose-500';
-
-        parsedWeeklyData = {
-          breakfast: Array(7).fill('쌀밥<br>콩나물국<br>제육볶음<br>배추김치'),
-          lunch: Array(7).fill('돈까스<br>우동<br>단무지<br>깍두기'),
-          dinner: Array(7).fill('잡곡밥<br>순두부찌개<br>계란말이<br>열무김치')
-        };
       }
+
+      // 프록시 전체 실패 또는 파싱 불가 시 오프라인 안전 모드 작동
+      statusText.innerText = '학교 연결 지연 (샘플 식단 표시)';
+      statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-amber-500';
+
+      parsedWeeklyData = {
+        breakfast: Array(7).fill('쌀밥<br>콩나물국<br>제육볶음<br>배추김치'),
+        lunch: Array(7).fill('돈까스<br>우동<br>단무지<br>깍두기'),
+        dinner: Array(7).fill('잡곡밥<br>순두부찌개<br>계란말이<br>열무김치')
+      };
 
       displaySelectedDayMenu();
     }
 
-    // 어제 / 오늘 / 내일 버튼 이벤트
+    // 네비게이션 이벤트
     document.getElementById('prevBtn').onclick = () => {
       selectedDayIdx = (selectedDayIdx - 1 + 7) % 7;
       renderTabs();
@@ -305,11 +323,10 @@
       displaySelectedDayMenu();
     };
 
-    // 옵션 변경 / 다크모드 이벤트
-    document.getElementById('proxySelect').onchange = fetchDormiMeal;
+    document.getElementById('retryBtn').onclick = fetchDormiMeal;
     document.getElementById('themeToggle').onclick = () => document.documentElement.classList.toggle('dark');
 
-    // 초기화 (접속 시 당일 식단 자동 표시)
+    // 실행
     renderTabs();
     fetchDormiMeal();
   </script>
