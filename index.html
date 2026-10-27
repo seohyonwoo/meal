@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공주대학교 기숙사 식단표</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen pb-12 transition-colors duration-200">
+
+  <!-- Header -->
+  <header class="bg-indigo-600 text-white shadow-lg dark:bg-indigo-900">
+    <div class="max-w-md mx-auto px-4 py-4 flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold flex items-center gap-2">
+          <i class="fa-solid fa-utensils"></i> 공주대 기숙사 식단표
+        </h1>
+        <p class="text-xs text-indigo-200">공주대학교 생활관(dormi.kongju.ac.kr) 연동</p>
+      </div>
+      <button id="themeToggle" class="p-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 dark:bg-indigo-800 text-white transition">
+        <i class="fa-solid fa-moon dark:hidden"></i>
+        <i class="fa-solid fa-sun hidden dark:inline"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 pt-4">
+
+    <!-- 어제 / 오늘 / 내일 네비게이션 컨트롤러 -->
+    <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 mb-4">
+      
+      <!-- 날짜 이동 버튼 (어제 / 오늘 / 내일) -->
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <button id="prevBtn" class="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i> 어제
+        </button>
+        <button id="todayBtn" class="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-xs font-bold transition shadow-sm flex items-center gap-1">
+          <i class="fa-solid fa-calendar-day"></i> 오늘
+        </button>
+        <button id="nextBtn" class="flex-1 py-2 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1">
+          내일 <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+      </div>
+
+      <!-- 요일 직접 선택 탭 -->
+      <div id="dayTabs" class="grid grid-cols-7 gap-1 text-center text-xs font-semibold">
+        <!-- JS로 생성 -->
+      </div>
+    </section>
+
+    <!-- 연결 상태 및 프록시 설정 -->
+    <div class="flex items-center justify-between text-xs text-slate-500 mb-4 px-1">
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" id="statusDot"></span>
+        <span id="statusText">식단 데이터 읽어오는 중...</span>
+      </div>
+      <select id="proxySelect" class="bg-transparent border border-slate-300 dark:border-slate-700 rounded px-1 py-0.5 text-xs">
+        <option value="corsproxy">프록시 1 (Corsproxy)</option>
+        <option value="allorigins">프록시 2 (AllOrigins)</option>
+        <option value="mock">오프라인 테스트 모드</option>
+      </select>
+    </div>
+
+    <!-- 끼니 카드 (아침, 점심, 저녁) -->
+    <section class="space-y-4" id="mealContainer">
+      <!-- 아침 -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+          <span class="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+            <i class="fa-solid fa-sun"></i> 아침 (조식)
+          </span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagBreakfast">대기</span>
+        </div>
+        <div id="menuBreakfast" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
+          <p class="animate-pulse text-slate-400">식단 정보를 불러오는 중...</p>
+        </div>
+      </div>
+
+      <!-- 점심 -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+          <span class="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+            <i class="fa-solid fa-cloud-sun"></i> 점심 (중식)
+          </span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagLunch">대기</span>
+        </div>
+        <div id="menuLunch" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
+          <p class="animate-pulse text-slate-400">식단 정보를 불러오는 중...</p>
+        </div>
+      </div>
+
+      <!-- 저녁 -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+          <span class="font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+            <i class="fa-solid fa-moon"></i> 저녁 (석식)
+          </span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium" id="tagDinner">대기</span>
+        </div>
+        <div id="menuDinner" class="text-sm space-y-1 text-slate-700 dark:text-slate-300 leading-relaxed">
+          <p class="animate-pulse text-slate-400">식단 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 원본 페이지 링크 -->
+    <div class="mt-6 text-center">
+      <a href="https://dormi.kongju.ac.kr/HOME/sub.php?code=041304" target="_blank" rel="noopener noreferrer" class="text-xs text-slate-400 hover:text-indigo-500 underline">
+        공주대학교 생활관 원본 식단표 바로가기 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+      </a>
+    </div>
+  </main>
+
+  <script>
+    const TARGET_URL = 'https://dormi.kongju.ac.kr/HOME/sub.php?code=041304';
+    const daysName = ['월', '화', '수', '목', '금', '토', '일'];
+
+    // 오늘 요일 계산 (0: 월요일 ~ 6: 일요일)
+    function getTodayIndex() {
+      let day = new Date().getDay() - 1; 
+      return day < 0 ? 6 : day;
+    }
+
+    const REAL_TODAY_IDX = getTodayIndex();
+    let selectedDayIdx = REAL_TODAY_IDX; // 접속 시 '오늘'로 자동 설정
+
+    // 파싱한 주간 식단 데이터 저장 (월~일: 0~6)
+    let parsedWeeklyData = {
+      breakfast: Array(7).fill('식단 정보 없음'),
+      lunch: Array(7).fill('식단 정보 없음'),
+      dinner: Array(7).fill('식단 정보 없음')
+    };
+
+    // 상단 요일 탭 UI
+    function renderTabs() {
+      const dayTabs = document.getElementById('dayTabs');
+      dayTabs.innerHTML = '';
+
+      daysName.forEach((day, idx) => {
+        const isSelected = idx === selectedDayIdx;
+        const isToday = idx === REAL_TODAY_IDX;
+
+        const btn = document.createElement('button');
+        btn.className = `py-2 rounded-lg transition flex flex-col items-center justify-center relative ${
+          isSelected 
+            ? 'bg-indigo-600 text-white shadow-md' 
+            : 'bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 text-slate-600 dark:text-slate-300'
+        }`;
+
+        btn.innerHTML = `
+          <span class="text-[10px] ${isSelected ? 'opacity-90' : 'opacity-60'}">${day}</span>
+          <span class="font-bold text-xs">${day}요일</span>
+          ${isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 absolute top-1 right-1"></span>' : ''}
+        `;
+
+        btn.onclick = () => {
+          selectedDayIdx = idx;
+          renderTabs();
+          displaySelectedDayMenu();
+        };
+        dayTabs.appendChild(btn);
+      });
+    }
+
+    // 시간대별 식사 상태 태그 업데이트
+    function updateMealTags() {
+      const hour = new Date().getHours();
+      const tagB = document.getElementById('tagBreakfast');
+      const tagL = document.getElementById('tagLunch');
+      const tagD = document.getElementById('tagDinner');
+
+      [tagB, tagL, tagD].forEach(t => { 
+        t.innerText = "대기"; 
+        t.className = "text-xs bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium"; 
+      });
+
+      // 선택된 요일이 '오늘'일 때만 실시간 식사태그 표시
+      if (selectedDayIdx === REAL_TODAY_IDX) {
+        if (hour < 9) {
+          tagB.innerText = "지금 식사 시간";
+          tagB.className = "text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200 px-2 py-0.5 rounded-full font-bold animate-pulse";
+        } else if (hour >= 9 && hour < 14) {
+          tagL.innerText = "지금 식사 시간";
+          tagL.className = "text-xs bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold animate-pulse";
+        } else if (hour >= 14 && hour < 20) {
+          tagD.innerText = "지금 식사 시간";
+          tagD.className = "text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200 px-2 py-0.5 rounded-full font-bold animate-pulse";
+        }
+      }
+    }
+
+    // 화면에 선택된 요일의 식단 표출
+    function displaySelectedDayMenu() {
+      updateMealTags();
+
+      const formatText = (text) => {
+        if (!text || text.trim() === '' || text.includes('등록된 식단이 없습니다')) {
+          return '<p class="text-slate-400 italic">식단이 등록되지 않았습니다.</p>';
+        }
+        return text.split(/<br\s*\/?>|\n/gi)
+                   .filter(item => item.trim() !== '')
+                   .map(item => `<div class="py-0.5">• ${item.trim()}</div>`)
+                   .join('');
+      };
+
+      document.getElementById('menuBreakfast').innerHTML = formatText(parsedWeeklyData.breakfast[selectedDayIdx]);
+      document.getElementById('menuLunch').innerHTML = formatText(parsedWeeklyData.lunch[selectedDayIdx]);
+      document.getElementById('menuDinner').innerHTML = formatText(parsedWeeklyData.dinner[selectedDayIdx]);
+    }
+
+    // 학교 웹페이지에서 HTML 파싱 (서버리스 크롤러)
+    async function fetchDormiMeal() {
+      const mode = document.getElementById('proxySelect').value;
+      const statusText = document.getElementById('statusText');
+      const statusDot = document.getElementById('statusDot');
+
+      if (mode === 'mock') {
+        statusText.innerText = '오프라인 샘플 데이터 표시 중';
+        statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-amber-500';
+        parsedWeeklyData = {
+          breakfast: Array(7).fill('쌀밥<br>콩나물국<br>제육볶음<br>배추김치'),
+          lunch: Array(7).fill('돈까스<br>우동<br>단무지<br>깍두기'),
+          dinner: Array(7).fill('잡곡밥<br>순두부찌개<br>계란말이<br>열무김치')
+        };
+        displaySelectedDayMenu();
+        return;
+      }
+
+      statusText.innerText = '공주대 기숙사 서버 동기화 중...';
+      statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping';
+
+      try {
+        let fetchUrl = mode === 'corsproxy' 
+          ? `https://corsproxy.io/?${encodeURIComponent(TARGET_URL)}`
+          : `https://api.allorigins.win/get?url=${encodeURIComponent(TARGET_URL)}`;
+
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error('네트워크 응답 오류');
+
+        let htmlText = mode === 'allorigins' ? (await res.json()).contents : await res.text();
+
+        // DOM 파싱
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        const table = doc.querySelector('table');
+
+        if (table) {
+          const rows = table.querySelectorAll('tr');
+
+          rows.forEach(row => {
+            const cells = Array.from(row.querySelectorAll('td, th')).map(td => td.innerHTML);
+            const rowText = row.innerText || '';
+
+            if (rowText.includes('아침') || rowText.includes('조식')) {
+              cells.slice(1, 8).forEach((cellHtml, i) => { if(i < 7) parsedWeeklyData.breakfast[i] = cellHtml; });
+            } else if (rowText.includes('점심') || rowText.includes('중식')) {
+              cells.slice(1, 8).forEach((cellHtml, i) => { if(i < 7) parsedWeeklyData.lunch[i] = cellHtml; });
+            } else if (rowText.includes('저녁') || rowText.includes('석식')) {
+              cells.slice(1, 8).forEach((cellHtml, i) => { if(i < 7) parsedWeeklyData.dinner[i] = cellHtml; });
+            }
+          });
+
+          statusText.innerText = '실시간 연동 완료';
+          statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-emerald-500';
+        } else {
+          throw new Error('식단표 테이블을 찾을 수 없습니다.');
+        }
+
+      } catch (err) {
+        console.warn('크롤링 실패 -> 샘플 데이터로 전환:', err);
+        statusText.innerText = '수신 실패 (오프라인 모드)';
+        statusDot.className = 'inline-block w-2.5 h-2.5 rounded-full bg-rose-500';
+
+        parsedWeeklyData = {
+          breakfast: Array(7).fill('쌀밥<br>콩나물국<br>제육볶음<br>배추김치'),
+          lunch: Array(7).fill('돈까스<br>우동<br>단무지<br>깍두기'),
+          dinner: Array(7).fill('잡곡밥<br>순두부찌개<br>계란말이<br>열무김치')
+        };
+      }
+
+      displaySelectedDayMenu();
+    }
+
+    // 어제 / 오늘 / 내일 버튼 이벤트
+    document.getElementById('prevBtn').onclick = () => {
+      selectedDayIdx = (selectedDayIdx - 1 + 7) % 7;
+      renderTabs();
+      displaySelectedDayMenu();
+    };
+
+    document.getElementById('nextBtn').onclick = () => {
+      selectedDayIdx = (selectedDayIdx + 1) % 7;
+      renderTabs();
+      displaySelectedDayMenu();
+    };
+
+    document.getElementById('todayBtn').onclick = () => {
+      selectedDayIdx = REAL_TODAY_IDX;
+      renderTabs();
+      displaySelectedDayMenu();
+    };
+
+    // 옵션 변경 / 다크모드 이벤트
+    document.getElementById('proxySelect').onchange = fetchDormiMeal;
+    document.getElementById('themeToggle').onclick = () => document.documentElement.classList.toggle('dark');
+
+    // 초기화 (접속 시 당일 식단 자동 표시)
+    renderTabs();
+    fetchDormiMeal();
+  </script>
+</body>
+</html>
