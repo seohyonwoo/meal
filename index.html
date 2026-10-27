@@ -182,7 +182,40 @@
   };
 
   let weekly = emptyWeek();
+// 현재 조회 중인 주의 월요일
+function getMonday(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() - mondayIndex(d));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
+let currentWeekMonday = getMonday(new Date());
+
+function formatDateParam(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
+
+function getWeekRange() {
+  const start = new Date(currentWeekMonday);
+  const end = new Date(currentWeekMonday);
+  end.setDate(end.getDate() + 6);
+
+  return {
+    weekStart: formatDateParam(start),
+    weekEnd: formatDateParam(end)
+  };
+}
+
+function isCurrentWeek() {
+  return currentWeekMonday.getTime() === getMonday(new Date()).getTime();
+}
+
+
+  
   // 월요일=0, 화요일=1, ..., 일요일=6
   const weekdayTodayIdx = mondayIndex(new Date());
 
